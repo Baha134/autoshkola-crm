@@ -5,26 +5,13 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
+    "dev": "nodemon --ignore whatsapp-session/ --ignore prisma/dev.db --ignore prisma/dev.db-journal src/app.js",
+    "client": "cd client && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run client\"",
     "migrate": "prisma migrate dev",
     "seed": "node prisma/seed.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "nodemon": "^3.1.14",
-    "prisma": "^5.22.0"
-  },
-  "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.10.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2",
-    "jsonwebtoken": "^9.0.3",
-    "zod": "^4.4.3"
-  }
+  "license": "ISC"
 }
