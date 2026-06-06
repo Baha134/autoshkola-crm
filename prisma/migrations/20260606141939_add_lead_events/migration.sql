@@ -1,0 +1,11 @@
+-- CreateTable
+CREATE TABLE "LeadEvent" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "leadId" INTEGER NOT NULL,
+    "userId" INTEGER,
+    "type" TEXT NOT NULL DEFAULT 'comment',
+    "text" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LeadEvent_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "LeadEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);

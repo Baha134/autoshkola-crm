@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/auth.store'
 import LoginPage from './pages/LoginPage'
 import Layout from './components/Layout'
+import DashboardPage from './pages/DashboardPage'
 import LeadsPage from './pages/LeadsPage'
 import PaymentsPage from './pages/PaymentsPage'
 import UsersPage from './pages/UsersPage'
@@ -16,7 +17,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/leads" />} />
+        <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="users" element={<UsersPage />} />

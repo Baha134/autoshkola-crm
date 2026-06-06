@@ -15,7 +15,12 @@ export default function UsersPage() {
 
   const createMutation = useMutation({
     mutationFn: data => api.post('/users', data),
-    onSuccess: () => { qc.invalidateQueries(['users']); toast.success('Пользователь добавлен'); setShowForm(false); setForm({ name: '', email: '', password: '', role: 'manager' }) }
+    onSuccess: () => {
+      qc.invalidateQueries(['users'])
+      toast.success('Пользователь добавлен')
+      setShowForm(false)
+      setForm({ name: '', email: '', password: '', role: 'manager' })
+    }
   })
 
   const deleteMutation = useMutation({
@@ -33,15 +38,18 @@ export default function UsersPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '600' }}>Пользователи</h1>
-        <button onClick={() => setShowForm(true)} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: '600', margin: 0 }}>Пользователи</h1>
+        <button
+          onClick={() => setShowForm(true)}
+          style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        >
           + Добавить
         </button>
       </div>
 
       {showForm && (
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <h3 style={{ marginBottom: '16px' }}>Новый пользователь</h3>
+          <h3 style={{ marginBottom: '16px', marginTop: 0 }}>Новый пользователь</h3>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
             <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
@@ -58,7 +66,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+      <div className="table-wrapper" style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>

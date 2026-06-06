@@ -15,20 +15,22 @@ model User {
   role      String   @default("manager")
   createdAt DateTime @default(now())
   leads     Lead[]
+  events    LeadEvent[]
 }
 
 model Lead {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   phone       String
-  source      String   @default("manual")
-  status      String   @default("new")
+  source      String      @default("manual")
+  status      String      @default("new")
   comment     String?
   managerId   Int?
-  manager     User?    @relation(fields: [managerId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  manager     User?       @relation(fields: [managerId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   payments    Payment[]
+  events      LeadEvent[]
 }
 
 model Payment {
@@ -37,5 +39,16 @@ model Payment {
   lead      Lead     @relation(fields: [leadId], references: [id])
   amount    Float
   note      String?
+  createdAt DateTime @default(now())
+}
+
+model LeadEvent {
+  id        Int      @id @default(autoincrement())
+  leadId    Int
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String   @default("comment")  // comment | status_change | call
+  text      String
   createdAt DateTime @default(now())
 }

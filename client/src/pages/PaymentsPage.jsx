@@ -25,7 +25,12 @@ export default function PaymentsPage() {
 
   const createMutation = useMutation({
     mutationFn: data => api.post('/payments', data),
-    onSuccess: () => { qc.invalidateQueries(['payments-all']); toast.success('Платёж добавлен'); setShowForm(false); setForm({ leadId: '', amount: '', note: '' }) }
+    onSuccess: () => {
+      qc.invalidateQueries(['payments-all'])
+      toast.success('Платёж добавлен')
+      setShowForm(false)
+      setForm({ leadId: '', amount: '', note: '' })
+    }
   })
 
   const deleteMutation = useMutation({
@@ -45,8 +50,11 @@ export default function PaymentsPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '600' }}>Платежи</h1>
-        <button onClick={() => setShowForm(true)} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: '600', margin: 0 }}>Платежи</h1>
+        <button
+          onClick={() => setShowForm(true)}
+          style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+        >
           + Добавить платёж
         </button>
       </div>
@@ -57,14 +65,31 @@ export default function PaymentsPage() {
 
       {showForm && (
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <h3 style={{ marginBottom: '16px' }}>Новый платёж</h3>
+          <h3 style={{ marginBottom: '16px', marginTop: 0 }}>Новый платёж</h3>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <select value={form.leadId} onChange={e => setForm({...form, leadId: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+            <select
+              value={form.leadId}
+              onChange={e => setForm({...form, leadId: e.target.value})}
+              required
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            >
               <option value="">Выбери лида</option>
               {leads.map(l => <option key={l.id} value={l.id}>{l.name} — {l.phone}</option>)}
             </select>
-            <input type="number" placeholder="Сумма (₸)" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input placeholder="Примечание" value={form.note} onChange={e => setForm({...form, note: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', gridColumn: 'span 2' }} />
+            <input
+              type="number"
+              placeholder="Сумма (₸)"
+              value={form.amount}
+              onChange={e => setForm({...form, amount: e.target.value})}
+              required
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+            />
+            <input
+              placeholder="Примечание"
+              value={form.note}
+              onChange={e => setForm({...form, note: e.target.value})}
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', gridColumn: 'span 2' }}
+            />
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px' }}>
               <button type="submit" style={{ padding: '10px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
               <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 24px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
@@ -73,7 +98,7 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+      <div className="table-wrapper" style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
