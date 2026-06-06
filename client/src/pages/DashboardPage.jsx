@@ -39,21 +39,15 @@ function StatCard({ label, value, sub, color, icon }) {
 }
 
 export default function DashboardPage() {
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+  // ✅ ИСПРАВЛЕНО: один запрос вместо N+1
+  // Платежи уже включены в ответ /leads через include: { payments: true }
+  const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
     queryFn: () => api.get('/leads').then(r => r.data)
   })
 
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ['payments-all'],
-    queryFn: async () => {
-      const all = await Promise.all(leads.map(l => api.get(`/payments/lead/${l.id}`).then(r => r.data)))
-      return all.flat()
-    },
-    enabled: leads.length > 0
-  })
-
-  const isLoading = leadsLoading || paymentsLoading
+  // Достаём платежи из уже загруженных лидов — без дополнительных запросов!
+  const payments = leads.flatMap(l => l.payments ?? [])
 
   const totalLeads = leads.length
   const newLeads = leads.filter(l => l.status === 'new').length
@@ -99,7 +93,7 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
         <StatCard label="Всего лидов"  value={totalLeads}                                   sub="за всё время"           color="var(--accent)"  icon="◈" />
         <StatCard label="Новых"        value={newLeads}                                      sub="ожидают обработки"     color="var(--amber)"   icon="◉" />
-        <StatCard label="Конверсия"    value={`${conversion}%`}                              sub={`${doneLeads} завершено`} color="var(--green)"icon="◎" />
+        <StatCard label="Конверсия"    value={`${conversion}%`}                              sub={`${doneLeads} завершено`} color="var(--green)" icon="◎" />
         <StatCard label="Выручка"      value={totalRevenue.toLocaleString() + ' ₸'}          sub="все платежи"           color="var(--purple)"  icon="◷" />
       </div>
 
