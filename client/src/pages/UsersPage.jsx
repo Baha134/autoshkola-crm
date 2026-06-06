@@ -28,71 +28,154 @@ export default function UsersPage() {
     onSuccess: () => { qc.invalidateQueries(['users']); toast.success('Пользователь удалён') }
   })
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    createMutation.mutate(form)
-  }
+  const handleSubmit = (e) => { e.preventDefault(); createMutation.mutate(form) }
 
-  if (isLoading) return <div>Загрузка...</div>
+  if (isLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '10px', color: 'var(--text)' }}>
+      <div style={{ animation: 'pulse 1.2s ease infinite', fontSize: '24px' }}>◉</div>
+      Загрузка...
+    </div>
+  )
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '600', margin: 0 }}>Пользователи</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-        >
+    <div style={{ maxWidth: '780px', animation: 'fadeIn 0.3s ease both' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text3)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+            Пользователи
+            <span style={{ marginLeft: '10px', fontSize: '14px', color: 'var(--text)', fontWeight: '400', fontFamily: 'var(--mono)' }}>{users.length}</span>
+          </h1>
+          <div style={{ fontSize: '13px', color: 'var(--text)' }}>Сотрудники и доступы</div>
+        </div>
+        <button onClick={() => setShowForm(true)} style={btnPrimary}>
           + Добавить
         </button>
       </div>
 
       {showForm && (
-        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <h3 style={{ marginBottom: '16px', marginTop: 0 }}>Новый пользователь</h3>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input type="password" placeholder="Пароль" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <select value={form.role} onChange={e => setForm({...form, role: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '22px', borderRadius: '12px', marginBottom: '16px', animation: 'slideDown 0.2s ease both', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '15px', color: 'var(--text3)' }}>+ Новый пользователь</h3>
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={inputStyle} />
+            <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required style={inputStyle} />
+            <input type="password" placeholder="Пароль" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required style={inputStyle} />
+            <select value={form.role} onChange={e => setForm({...form, role: e.target.value})} style={selectStyle}>
               <option value="manager">Менеджер</option>
               <option value="admin">Администратор</option>
             </select>
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px' }}>
-              <button type="submit" style={{ padding: '10px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Добавить</button>
-              <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 24px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Отмена</button>
+              <button type="submit" style={btnPrimary}>Добавить</button>
+              <button type="button" onClick={() => setShowForm(false)} style={btnSecondary}>Отмена</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="table-wrapper" style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              {['Имя', 'Email', 'Роль', ''].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#64748b', fontWeight: '500' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '12px 16px', fontSize: '14px' }}>{u.name}</td>
-                <td style={{ padding: '12px 16px', fontSize: '14px' }}>{u.email}</td>
-                <td style={{ padding: '12px 16px' }}>
-                  <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '12px', background: u.role === 'admin' ? '#dbeafe' : '#f0fdf4', color: u.role === 'admin' ? '#2563eb' : '#16a34a' }}>
-                    {u.role === 'admin' ? 'Админ' : 'Менеджер'}
-                  </span>
-                </td>
-                <td style={{ padding: '12px 16px' }}>
-                  <button onClick={() => deleteMutation.mutate(u.id)} style={{ padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>🗑️</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Список пользователей */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {users.map(u => (
+          <div
+            key={u.id}
+            style={{
+              background: 'var(--bg2)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border2)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+          >
+            {/* Аватар */}
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+              background: u.role === 'admin'
+                ? 'linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%)'
+                : 'linear-gradient(135deg, var(--green) 0%, #059669 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', fontSize: '15px', fontWeight: '700',
+            }}>
+              {(u.name || 'U')[0].toUpperCase()}
+            </div>
+
+            {/* Инфо */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text3)', marginBottom: '2px' }}>{u.name}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+            </div>
+
+            {/* Роль */}
+            <span style={{
+              padding: '4px 12px', borderRadius: '100px', fontSize: '11px', fontWeight: '600',
+              background: u.role === 'admin' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.12)',
+              color: u.role === 'admin' ? 'var(--accent)' : 'var(--green)',
+              border: `1px solid ${u.role === 'admin' ? 'rgba(59,130,246,0.25)' : 'rgba(16,185,129,0.2)'}`,
+              whiteSpace: 'nowrap',
+            }}>
+              {u.role === 'admin' ? '⬡ Админ' : '◈ Менеджер'}
+            </span>
+
+            {/* Удалить */}
+            <button
+              onClick={() => { if (confirm('Удалить пользователя?')) deleteMutation.mutate(u.id) }}
+              style={{
+                padding: '7px 10px',
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: '8px', cursor: 'pointer', fontSize: '14px', transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => e.target.style.background = 'rgba(239,68,68,0.18)'}
+              onMouseLeave={e => e.target.style.background = 'rgba(239,68,68,0.08)'}
+            >🗑️</button>
+          </div>
+        ))}
+
+        {users.length === 0 && (
+          <div style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px',
+            padding: '48px', textAlign: 'center', color: 'var(--text)', fontSize: '14px',
+          }}>
+            ◉ Пользователей пока нет
+          </div>
+        )}
       </div>
     </div>
   )
+}
+
+const inputStyle = {
+  padding: '9px 12px',
+  background: 'var(--bg3)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  color: 'var(--text3)',
+  fontSize: '13px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  width: '100%',
+}
+const selectStyle = { ...inputStyle, cursor: 'pointer' }
+const btnPrimary = {
+  padding: '9px 20px',
+  background: 'var(--accent2)',
+  color: 'white',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  fontWeight: '600',
+  boxShadow: '0 2px 8px var(--accent-glow)',
+}
+const btnSecondary = {
+  padding: '9px 18px',
+  background: 'var(--bg3)',
+  color: 'var(--text2)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '13px',
 }

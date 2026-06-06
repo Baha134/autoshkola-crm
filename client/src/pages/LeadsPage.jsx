@@ -25,11 +25,7 @@ function LeadHistory({ leadId }) {
 
   const addMutation = useMutation({
     mutationFn: data => api.post('/events', data),
-    onSuccess: () => {
-      qc.invalidateQueries(['events', leadId])
-      setText('')
-      toast.success('Добавлено')
-    }
+    onSuccess: () => { qc.invalidateQueries(['events', leadId]); setText(''); toast.success('Добавлено') }
   })
 
   const deleteMutation = useMutation({
@@ -37,40 +33,35 @@ function LeadHistory({ leadId }) {
     onSuccess: () => qc.invalidateQueries(['events', leadId])
   })
 
-  const handleAdd = (e) => {
-    e.preventDefault()
-    if (!text.trim()) return
-    addMutation.mutate({ leadId, type, text })
-  }
+  const handleAdd = (e) => { e.preventDefault(); if (!text.trim()) return; addMutation.mutate({ leadId, type, text }) }
 
   return (
-    <div style={{ padding: '16px 24px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
-      <div style={{ fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '12px' }}>
+    <div style={{ padding: '16px 20px 18px', background: 'var(--bg)', borderTop: '1px solid var(--border)', animation: 'slideDown 0.2s ease both' }}>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: '14px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         История лида
       </div>
 
       {isLoading ? (
-        <div style={{ color: '#94a3b8', fontSize: '13px' }}>Загрузка...</div>
+        <div style={{ color: 'var(--text)', fontSize: '13px' }}>Загрузка...</div>
       ) : events.length === 0 ? (
-        <div style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '12px' }}>Событий пока нет</div>
+        <div style={{ color: 'var(--text)', fontSize: '13px', marginBottom: '12px' }}>Событий пока нет</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
           {events.map(ev => (
-            <div key={ev.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '16px', marginTop: '1px' }}>{EVENT_ICONS[ev.type] || '📝'}</span>
+            <div key={ev.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px 10px', background: 'var(--bg2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '15px', marginTop: '1px' }}>{EVENT_ICONS[ev.type] || '📝'}</span>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '13px', color: '#1e293b' }}>{ev.text}</span>
-                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text3)' }}>{ev.text}</span>
+                <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '3px', fontFamily: 'var(--mono)' }}>
                   {ev.user?.name || 'Система'} · {dayjs(ev.createdAt).format('DD.MM.YYYY HH:mm')}
                 </div>
               </div>
               <button
                 onClick={() => deleteMutation.mutate(ev.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: '14px', padding: '0 4px' }}
-                title="Удалить"
-              >
-                ✕
-              </button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border2)', fontSize: '13px', padding: '0 2px', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.color = 'var(--red)'}
+                onMouseLeave={e => e.target.style.color = 'var(--border2)'}
+              >✕</button>
             </div>
           ))}
         </div>
@@ -80,7 +71,7 @@ function LeadHistory({ leadId }) {
         <select
           value={type}
           onChange={e => setType(e.target.value)}
-          style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px', background: 'white' }}
+          style={selectStyle}
         >
           {EVENT_TYPES.map(t => <option key={t} value={t}>{EVENT_LABELS[t]}</option>)}
         </select>
@@ -88,15 +79,17 @@ function LeadHistory({ leadId }) {
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder="Добавить запись..."
-          style={{ flex: 1, padding: '7px 12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '13px' }}
+          style={{ ...inputStyle, flex: 1 }}
         />
         <button
           type="submit"
           disabled={!text.trim()}
           style={{
-            padding: '7px 14px', background: '#2563eb', color: 'white',
-            border: 'none', borderRadius: '6px', cursor: 'pointer',
-            fontSize: '13px', opacity: text.trim() ? 1 : 0.5
+            padding: '8px 16px',
+            background: text.trim() ? 'var(--accent2)' : 'var(--bg4)',
+            color: text.trim() ? 'white' : 'var(--text)',
+            border: 'none', borderRadius: '8px', cursor: text.trim() ? 'pointer' : 'not-allowed',
+            fontSize: '13px', fontWeight: '500', transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}
         >
           Добавить
@@ -112,8 +105,6 @@ export default function LeadsPage() {
   const [editLead, setEditLead] = useState(null)
   const [form, setForm] = useState({ name: '', phone: '', source: 'manual', status: 'new', comment: '' })
   const [expandedId, setExpandedId] = useState(null)
-
-  // Поиск и фильтры
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterSource, setFilterSource] = useState('')
@@ -127,12 +118,10 @@ export default function LeadsPage() {
     mutationFn: data => api.post('/leads', data),
     onSuccess: () => { qc.invalidateQueries(['leads']); toast.success('Лид добавлен'); resetForm() }
   })
-
   const updateMutation = useMutation({
     mutationFn: ({ id, ...data }) => api.put(`/leads/${id}`, data),
     onSuccess: () => { qc.invalidateQueries(['leads']); toast.success('Лид обновлён'); resetForm() }
   })
-
   const deleteMutation = useMutation({
     mutationFn: id => api.delete(`/leads/${id}`),
     onSuccess: () => { qc.invalidateQueries(['leads']); toast.success('Лид удалён') }
@@ -140,8 +129,7 @@ export default function LeadsPage() {
 
   const resetForm = () => {
     setForm({ name: '', phone: '', source: 'manual', status: 'new', comment: '' })
-    setShowForm(false)
-    setEditLead(null)
+    setShowForm(false); setEditLead(null)
   }
 
   const handleSubmit = (e) => {
@@ -156,17 +144,12 @@ export default function LeadsPage() {
     setShowForm(true)
   }
 
-  const toggleHistory = (id) => {
-    setExpandedId(prev => prev === id ? null : id)
-  }
+  const toggleHistory = (id) => setExpandedId(prev => prev === id ? null : id)
 
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
       const q = search.toLowerCase()
-      const matchSearch = !q ||
-        lead.name.toLowerCase().includes(q) ||
-        lead.phone.toLowerCase().includes(q) ||
-        (lead.comment || '').toLowerCase().includes(q)
+      const matchSearch = !q || lead.name.toLowerCase().includes(q) || lead.phone.toLowerCase().includes(q) || (lead.comment || '').toLowerCase().includes(q)
       const matchStatus = !filterStatus || lead.status === filterStatus
       const matchSource = !filterSource || lead.source === filterSource
       return matchSearch && matchStatus && matchSource
@@ -175,142 +158,210 @@ export default function LeadsPage() {
 
   const hasFilters = search || filterStatus || filterSource
 
-  if (isLoading) return <div>Загрузка...</div>
+  if (isLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '10px', color: 'var(--text)' }}>
+      <div style={{ animation: 'pulse 1.2s ease infinite', fontSize: '24px' }}>◈</div>
+      Загрузка...
+    </div>
+  )
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '600', margin: 0 }}>
-          Лиды
-          <span style={{ marginLeft: '10px', fontSize: '14px', color: '#64748b', fontWeight: '400' }}>
-            {filteredLeads.length} из {leads.length}
-          </span>
-        </h1>
+    <div style={{ maxWidth: '1100px', animation: 'fadeIn 0.3s ease both' }}>
+      {/* Заголовок */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text3)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+            Лиды
+            <span style={{ marginLeft: '10px', fontSize: '14px', color: 'var(--text)', fontWeight: '400', fontFamily: 'var(--mono)' }}>
+              {filteredLeads.length}/{leads.length}
+            </span>
+          </h1>
+          <div style={{ fontSize: '13px', color: 'var(--text)' }}>Управление заявками и учениками</div>
+        </div>
         <button
           onClick={() => setShowForm(true)}
-          style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+          style={btnPrimary}
         >
           + Добавить лид
         </button>
       </div>
 
       {/* Поиск и фильтры */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input
           placeholder="🔍 Поиск по имени, телефону, комментарию..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: '1', minWidth: '240px', padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px' }}
+          style={{ ...inputStyle, flex: '1', minWidth: '240px' }}
         />
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', background: 'white', cursor: 'pointer' }}
-        >
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={selectStyle}>
           <option value="">Все статусы</option>
           {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
-        <select
-          value={filterSource}
-          onChange={e => setFilterSource(e.target.value)}
-          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', background: 'white', cursor: 'pointer' }}
-        >
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={selectStyle}>
           <option value="">Все источники</option>
           {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
         </select>
         {hasFilters && (
           <button
             onClick={() => { setSearch(''); setFilterStatus(''); setFilterSource('') }}
-            style={{ padding: '10px 14px', background: '#f1f5f9', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', color: '#64748b' }}
-          >
-            ✕ Сбросить
-          </button>
+            style={{ padding: '9px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)', transition: 'all 0.15s' }}
+          >✕ Сбросить</button>
         )}
       </div>
 
       {/* Форма */}
       {showForm && (
-        <div style={{ background: 'white', padding: '24px', borderRadius: '12px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <h3 style={{ marginBottom: '16px', marginTop: 0 }}>{editLead ? 'Редактировать лид' : 'Новый лид'}</h3>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <input placeholder="Телефон" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
-            <select value={form.source} onChange={e => setForm({...form, source: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '22px', borderRadius: '12px', marginBottom: '16px', animation: 'slideDown 0.2s ease both', boxShadow: 'var(--shadow)' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '15px', color: 'var(--text3)' }}>{editLead ? '✏️ Редактировать лид' : '+ Новый лид'}</h3>
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={inputStyle} />
+            <input placeholder="Телефон" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required style={inputStyle} />
+            <select value={form.source} onChange={e => setForm({...form, source: e.target.value})} style={selectStyle}>
               {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
             </select>
-            <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
+            <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} style={selectStyle}>
               {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
-            <input placeholder="Комментарий" value={form.comment} onChange={e => setForm({...form, comment: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd', gridColumn: 'span 2' }} />
+            <input placeholder="Комментарий" value={form.comment} onChange={e => setForm({...form, comment: e.target.value})} style={{ ...inputStyle, gridColumn: 'span 2' }} />
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px' }}>
-              <button type="submit" style={{ padding: '10px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                {editLead ? 'Сохранить' : 'Добавить'}
-              </button>
-              <button type="button" onClick={resetForm} style={{ padding: '10px 24px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                Отмена
-              </button>
+              <button type="submit" style={btnPrimary}>{editLead ? 'Сохранить' : 'Добавить'}</button>
+              <button type="button" onClick={resetForm} style={btnSecondary}>Отмена</button>
             </div>
           </form>
         </div>
       )}
 
       {/* Таблица */}
-      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#64748b', fontWeight: '500', width: '24px' }}></th>
-              {['Имя', 'Телефон', 'Источник', 'Статус', 'Дата', 'Действия'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', color: '#64748b', fontWeight: '500' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLeads.map(lead => (
-              <>
-                <tr
-                  key={lead.id}
-                  style={{ borderTop: '1px solid #f1f5f9', cursor: 'pointer' }}
-                  onClick={() => toggleHistory(lead.id)}
-                >
-                  <td style={{ padding: '12px 8px 12px 16px', color: '#94a3b8', fontSize: '12px' }}>
-                    {expandedId === lead.id ? '▼' : '▶'}
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '500' }}>{lead.name}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>{lead.phone}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '13px', color: '#64748b' }}>{SOURCE_LABELS[lead.source] || lead.source}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '12px', background: STATUS_COLORS[lead.status] + '20', color: STATUS_COLORS[lead.status] }}>
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px', fontSize: '13px', color: '#64748b' }}>{dayjs(lead.createdAt).format('DD.MM.YYYY')}</td>
-                  <td style={{ padding: '12px 16px' }} onClick={e => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => handleEdit(lead)} style={{ padding: '6px 12px', background: '#f1f5f9', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>✏️</button>
-                      <button onClick={() => deleteMutation.mutate(lead.id)} style={{ padding: '6px 12px', background: '#fef2f2', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-                {expandedId === lead.id && (
-                  <tr key={`history-${lead.id}`}>
-                    <td colSpan={7} style={{ padding: 0 }}>
-                      <LeadHistory leadId={lead.id} />
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div className="table-wrapper">
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
+                <th style={thStyle}></th>
+                {['Имя', 'Телефон', 'Источник', 'Статус', 'Дата', 'Действия'].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLeads.map(lead => (
+                <>
+                  <tr
+                    key={lead.id}
+                    style={{ borderTop: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                    onClick={() => toggleHistory(lead.id)}
+                  >
+                    <td style={{ padding: '12px 8px 12px 16px', color: 'var(--text)', fontSize: '12px', userSelect: 'none' }}>
+                      <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: expandedId === lead.id ? 'rotate(90deg)' : 'none' }}>▶</span>
+                    </td>
+                    <td style={{ padding: '12px 14px', fontSize: '14px', fontWeight: '600', color: 'var(--text3)' }}>{lead.name}</td>
+                    <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)' }}>{lead.phone}</td>
+                    <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text)' }}>{SOURCE_LABELS[lead.source] || lead.source}</td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <StatusBadge status={lead.status} />
+                    </td>
+                    <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text)', fontFamily: 'var(--mono)' }}>{dayjs(lead.createdAt).format('DD.MM.YYYY')}</td>
+                    <td style={{ padding: '12px 14px' }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => handleEdit(lead)} style={iconBtn('#3b82f6')}>✏️</button>
+                        <button onClick={() => { if (confirm('Удалить лид?')) deleteMutation.mutate(lead.id) }} style={iconBtn('#ef4444')}>🗑️</button>
+                      </div>
                     </td>
                   </tr>
-                )}
-              </>
-            ))}
-            {filteredLeads.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
-                  {hasFilters ? 'Ничего не найдено. Попробуй изменить фильтры.' : 'Лидов пока нет'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  {expandedId === lead.id && (
+                    <tr key={`history-${lead.id}`}>
+                      <td colSpan={7} style={{ padding: 0 }}>
+                        <LeadHistory leadId={lead.id} />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+              {filteredLeads.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text)', fontSize: '14px' }}>
+                    {hasFilters ? '🔍 Ничего не найдено. Попробуй изменить фильтры.' : '◈ Лидов пока нет. Добавь первый!'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
 }
+
+function StatusBadge({ status }) {
+  const color = STATUS_COLORS[status]
+  return (
+    <span style={{
+      padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '600',
+      background: color + '18', color, border: `1px solid ${color}30`,
+    }}>
+      {STATUS_LABELS[status]}
+    </span>
+  )
+}
+
+const inputStyle = {
+  padding: '9px 12px',
+  background: 'var(--bg3)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  color: 'var(--text3)',
+  fontSize: '13px',
+  outline: 'none',
+  transition: 'border-color 0.15s',
+  boxSizing: 'border-box',
+  width: '100%',
+}
+const selectStyle = {
+  ...inputStyle,
+  cursor: 'pointer',
+}
+const btnPrimary = {
+  padding: '9px 20px',
+  background: 'var(--accent2)',
+  color: 'white',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  fontWeight: '600',
+  transition: 'all 0.15s',
+  boxShadow: '0 2px 8px var(--accent-glow)',
+  letterSpacing: '0.01em',
+}
+const btnSecondary = {
+  padding: '9px 18px',
+  background: 'var(--bg3)',
+  color: 'var(--text2)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  transition: 'all 0.15s',
+}
+const thStyle = {
+  padding: '11px 14px',
+  textAlign: 'left',
+  fontSize: '11px',
+  color: 'var(--text)',
+  fontWeight: '600',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+}
+const iconBtn = (color) => ({
+  padding: '6px 10px',
+  background: color + '14',
+  border: '1px solid ' + color + '30',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  transition: 'all 0.15s',
+})

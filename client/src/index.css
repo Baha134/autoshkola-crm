@@ -1,18 +1,42 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  font: 18px/145% var(--sans);
-  color: var(--text);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
+:root {
+  --bg: #0f1117;
+  --bg2: #161b26;
+  --bg3: #1e2535;
+  --bg4: #252d3d;
+  --border: #2a3347;
+  --border2: #364057;
+  --text: #a8b4cc;
+  --text2: #d1daea;
+  --text3: #f0f4fb;
+  --accent: #3b82f6;
+  --accent2: #2563eb;
+  --accent-glow: rgba(59,130,246,0.18);
+  --green: #10b981;
+  --green-bg: rgba(16,185,129,0.12);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --purple: #8b5cf6;
+  --purple-bg: rgba(139,92,246,0.12);
+  --radius: 10px;
+  --shadow: 0 2px 16px rgba(0,0,0,0.35);
+  --font: 'Golos Text', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text2);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 #root {
@@ -21,64 +45,60 @@ body {
   flex-direction: column;
 }
 
-h1, h2 {
-  font-family: var(--sans);
-  font-weight: 500;
-  color: var(--text-h);
+h1, h2, h3 {
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--text3);
+  margin: 0;
 }
+
+input, select, textarea, button {
+  font-family: var(--font);
+}
+
+/* ── Скроллбар ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a5568; }
 
 /* ── Мобильный вид ── */
 @media (max-width: 768px) {
-
-  /* Показываем мобильную шапку */
-  .mobile-header {
-    display: flex !important;
-  }
-
-  /* Показываем оверлей когда меню открыто */
-  .mobile-overlay {
-    display: block !important;
-  }
-
-  /* Кнопка закрытия в сайдбаре */
-  .sidebar-close {
-    display: block !important;
-  }
-
-  /* Сайдбар: по умолчанию скрыт, выезжает слева */
+  .mobile-header { display: flex !important; }
   .sidebar {
     position: fixed !important;
-    top: 0;
-    left: 0;
-    height: 100vh;
+    top: 0; left: 0; bottom: 0;
     z-index: 50;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
-    width: 240px !important;
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1) !important;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.5) !important;
   }
-
   .sidebar.sidebar-open {
-    transform: translateX(0);
+    transform: translateX(0) !important;
   }
-
-  /* Основной контент на всю ширину */
-  .main-content {
-    padding: 16px !important;
-  }
-
-  /* Таблицы — горизонтальный скролл */
-  table {
-    min-width: 560px;
-  }
-
-  .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  .sidebar-close { display: block !important; }
+  .mobile-overlay { display: block !important; }
+  .main-content { padding: 16px !important; }
 }
 
-@media (max-width: 480px) {
-  .main-content {
-    padding: 12px !important;
-  }
+/* ── Таблицы ── */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* ── Анимации ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-in { animation: fadeIn 0.3s ease both; }
+.slide-down { animation: slideDown 0.2s ease both; }

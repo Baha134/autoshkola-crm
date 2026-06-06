@@ -5,61 +5,99 @@ const qrcode = require('qrcode-terminal')
 
 const prisma = new PrismaClient()
 let sock = null
+let reconnectCount = 0
+const MAX_RECONNECTS = 5
+const RECONNECT_DELAY = 10000 // 10 секунд между попытками
 
 async function startWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(
-    path.join(__dirname, '../../whatsapp-session')
-  )
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(
+      path.join(__dirname, '../../whatsapp-session')
+    )
 
-  sock = makeWASocket({
-    auth: state,
-  })
+    sock = makeWASocket({
+      auth: state,
+      printQRInTerminal: false,
+      connectTimeoutMs: 30000,
+      defaultQueryTimeoutMs: 30000,
+      keepAliveIntervalMs: 30000,
+      retryRequestDelayMs: 5000,
+    })
 
-  sock.ev.on('creds.update', saveCreds)
+    sock.ev.on('creds.update', saveCreds)
 
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      qrcode.generate(qr, { small: true })
-      console.log('📱 Отсканируй QR код телефоном автошколы')
-    }
-    if (connection === 'close') {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
-      console.log('WhatsApp отключён, переподключение:', shouldReconnect)
-      if (shouldReconnect) startWhatsApp()
-    } else if (connection === 'open') {
-      console.log('✅ WhatsApp подключён!')
-    }
-  })
-
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    for (const msg of messages) {
-      if (msg.key.fromMe) continue
-      if (!msg.message) continue
-
-      const phone = msg.key.remoteJid.replace('@s.whatsapp.net', '')
-      const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
-
-      console.log(`📱 Новое сообщение от ${phone}: ${text}`)
-
-      try {
-        const existing = await prisma.lead.findFirst({ where: { phone } })
-        if (!existing) {
-          await prisma.lead.create({
-            data: {
-              name: `WhatsApp ${phone}`,
-              phone,
-              source: 'whatsapp',
-              status: 'new',
-              comment: text,
-            }
-          })
-          console.log(`✅ Новый лид создан: ${phone}`)
-        }
-      } catch (e) {
-        console.error('Ошибка создания лида:', e.message)
+    sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+      if (qr) {
+        qrcode.generate(qr, { small: true })
+        console.log('📱 Отсканируй QR код телефоном автошколы')
       }
+
+      if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut
+
+        if (isLoggedOut) {
+          console.log('❌ WhatsApp: сессия завершена (loggedOut). Переподключение не нужно.')
+          return
+        }
+
+        if (reconnectCount >= MAX_RECONNECTS) {
+          console.log(`⛔ WhatsApp: превышен лимит переподключений (${MAX_RECONNECTS}). Остановлено.`)
+          console.log('   CRM работает в обычном режиме без WhatsApp.')
+          return
+        }
+
+        reconnectCount++
+        console.log(`🔄 WhatsApp переподключение ${reconnectCount}/${MAX_RECONNECTS} через ${RECONNECT_DELAY / 1000}с...`)
+        setTimeout(() => startWhatsApp(), RECONNECT_DELAY)
+
+      } else if (connection === 'open') {
+        reconnectCount = 0 // сбрасываем счётчик при успешном подключении
+        console.log('✅ WhatsApp подключён!')
+      }
+    })
+
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+      for (const msg of messages) {
+        if (msg.key.fromMe) continue
+        if (!msg.message) continue
+
+        const phone = msg.key.remoteJid.replace('@s.whatsapp.net', '')
+        const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ''
+
+        console.log(`📱 Новое сообщение от ${phone}: ${text}`)
+
+        try {
+          const existing = await prisma.lead.findFirst({ where: { phone } })
+          if (!existing) {
+            await prisma.lead.create({
+              data: {
+                name: `WhatsApp ${phone}`,
+                phone,
+                source: 'whatsapp',
+                status: 'new',
+                comment: text,
+              }
+            })
+            console.log(`✅ Новый лид создан: ${phone}`)
+          }
+        } catch (e) {
+          console.error('Ошибка создания лида:', e.message)
+        }
+      }
+    })
+
+  } catch (e) {
+    console.error('Ошибка запуска WhatsApp:', e.message)
+
+    if (reconnectCount < MAX_RECONNECTS) {
+      reconnectCount++
+      console.log(`🔄 Повтор через ${RECONNECT_DELAY / 1000}с... (${reconnectCount}/${MAX_RECONNECTS})`)
+      setTimeout(() => startWhatsApp(), RECONNECT_DELAY)
+    } else {
+      console.log('⛔ WhatsApp остановлен. CRM работает без него.')
     }
-  })
+  }
 }
 
 module.exports = { startWhatsApp }
