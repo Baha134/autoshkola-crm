@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -48,7 +49,7 @@ model LeadEvent {
   lead      Lead     @relation(fields: [leadId], references: [id])
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
-  type      String   @default("comment")  // comment | status_change | call
+  type      String   @default("comment")
   text      String
   createdAt DateTime @default(now())
 }
