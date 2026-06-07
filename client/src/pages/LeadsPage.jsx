@@ -605,8 +605,7 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000,
-        overflowY: 'scroll', padding: '40px 20px',
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999, overflowY: 'scroll', padding: '40px 20px',
       }}
       onClick={onClose}
     >
@@ -1366,3 +1365,4 @@ const iconBtn = (color) => ({
   padding: '6px 10px', background: color + '14', border: '1px solid ' + color + '30',
   borderRadius: '6px', cursor: 'pointer', fontSize: '13px', transition: 'all 0.15s',
 })
+
