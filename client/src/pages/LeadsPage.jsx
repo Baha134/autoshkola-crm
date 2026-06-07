@@ -323,9 +323,10 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
       onClick={onClose}
     >
       <div
+       ref={el => el && el.scrollTo(0, 0)}
         style={{
           background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px',
-          width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto',
+          width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', scrollPaddingTop: '0',
           boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
         }}
         onClick={e => e.stopPropagation()}
