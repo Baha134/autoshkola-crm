@@ -1,13 +1,32 @@
-// ПОЛНЫЙ ФАЙЛ: client/src/components/Layout.jsx
-// Изменения vs этап 3: добавлен пункт "Расписание" в меню
-
 import { Outlet, NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/auth.store'
 import { useQuery } from '@tanstack/react-query'
 import api from '../api'
 import dayjs from 'dayjs'
 
+// ─── Тема ───────────────────────────────────────────────────────────────────
+function useTheme() {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('crm-theme') || 'dark'
+  })
+
+  useEffect(() => {
+    const html = document.documentElement
+    if (theme === 'light') {
+      html.classList.add('theme-light')
+    } else {
+      html.classList.remove('theme-light')
+    }
+    localStorage.setItem('crm-theme', theme)
+  }, [theme])
+
+  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+
+  return { theme, toggle }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function isCallToday(lead) {
   if (!lead.nextCallAt) return false
   return dayjs(lead.nextCallAt).isSame(dayjs(), 'day')
@@ -17,9 +36,24 @@ function isCallOverdue(lead) {
   return dayjs(lead.nextCallAt).isBefore(dayjs(), 'day')
 }
 
+// ─── Layout ──────────────────────────────────────────────────────────────────
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { theme, toggle: toggleTheme } = useTheme()
+
+  // Закрывать sidebar при resize до desktop
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth > 768) setSidebarOpen(false) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // Запрещать скролл body когда sidebar открыт
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [sidebarOpen])
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads'],
@@ -33,50 +67,35 @@ export default function Layout() {
   ).length
 
   const navItems = [
-    { to: '/',           icon: '◈', label: 'Дашборд'     },
-    { to: '/leads',      icon: '◉', label: 'Лиды'        },
-    { to: '/reminders',  icon: '🔔', label: 'Напоминания', badge: alertCount },
-    { to: '/schedule',   icon: '📅', label: 'Расписание'  },
-    { to: '/payments',   icon: '◷', label: 'Платежи'     },
+    { to: '/',          icon: '◈', label: 'Дашборд'    },
+    { to: '/leads',     icon: '◉', label: 'Лиды'       },
+    { to: '/reminders', icon: '🔔', label: 'Напоминания', badge: alertCount },
+    { to: '/schedule',  icon: '📅', label: 'Расписание' },
+    { to: '/payments',  icon: '◷', label: 'Платежи'    },
     ...(user?.role === 'admin' ? [{ to: '/users', icon: '◎', label: 'Сотрудники' }] : []),
   ]
 
-  const linkStyle = (isActive) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '10px 14px',
-    borderRadius: '9px',
-    textDecoration: 'none',
-    fontSize: '13px',
-    fontWeight: isActive ? '600' : '400',
-    color: isActive ? 'var(--text3)' : 'var(--text)',
-    background: isActive ? 'var(--bg4)' : 'transparent',
-    transition: 'all 0.15s',
-    position: 'relative',
-  })
+  const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div style={{ display: 'flex', minHeight: '100svh', background: 'var(--bg)' }}>
+    <div className="layout-root">
 
+      {/* Оверлей мобильного сайдбара */}
       <div
-        className="mobile-overlay"
-        onClick={() => setSidebarOpen(false)}
-        style={{ display: 'none', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+        className={`mobile-overlay${sidebarOpen ? ' overlay-visible' : ''}`}
+        onClick={closeSidebar}
       />
 
-      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`} style={{
-        width: '220px', flexShrink: 0,
-        background: 'var(--bg2)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', padding: '16px 12px', zIndex: 50,
-      }}>
-        <button className="sidebar-close" onClick={() => setSidebarOpen(false)} style={{
-          display: 'none', alignSelf: 'flex-end', marginBottom: '8px',
-          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '20px', padding: '4px',
-        }}>✕</button>
+      {/* ─── Сайдбар ─────────────────────────────────────────────────────── */}
+      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
+        {/* Кнопка закрыть (только мобиль) */}
+        <button className="sidebar-close" onClick={closeSidebar}>✕</button>
 
         {/* Лого */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', marginBottom: '20px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '8px 4px', marginBottom: '20px',
+        }}>
           <div style={{
             width: '34px', height: '34px', borderRadius: '9px', flexShrink: 0,
             background: 'linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%)',
@@ -89,18 +108,35 @@ export default function Layout() {
           </div>
         </div>
 
+        {/* Навигация */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              onClick={() => setSidebarOpen(false)}
-              style={({ isActive }) => linkStyle(isActive)}
-              onMouseEnter={e => { if (!e.currentTarget.style.background.includes('bg4')) e.currentTarget.style.background = 'var(--bg3)' }}
-              onMouseLeave={e => { if (!e.currentTarget.style.background.includes('bg4')) e.currentTarget.style.background = 'transparent' }}
+              onClick={closeSidebar}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: '9px',
+                textDecoration: 'none', fontSize: '13px',
+                fontWeight: isActive ? '600' : '400',
+                color: isActive ? 'var(--text3)' : 'var(--text)',
+                background: isActive ? 'var(--bg4)' : 'transparent',
+                transition: 'all 0.15s',
+              })}
+              onMouseEnter={e => {
+                if (!e.currentTarget.style.background?.includes('bg4'))
+                  e.currentTarget.style.background = 'var(--bg3)'
+              }}
+              onMouseLeave={e => {
+                if (!e.currentTarget.style.background?.includes('bg4'))
+                  e.currentTarget.style.background = 'transparent'
+              }}
             >
-              <span style={{ fontSize: '14px', width: '18px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: '14px', width: '18px', textAlign: 'center', flexShrink: 0 }}>
+                {item.icon}
+              </span>
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.badge > 0 && (
                 <span style={{
@@ -115,8 +151,9 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Профиль */}
+        {/* Профиль + кнопки */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
+          {/* Пользователь */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <div style={{
               width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
@@ -129,39 +166,93 @@ export default function Layout() {
               {(user?.name || 'U')[0].toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text)', marginTop: '1px' }}>{user?.role === 'admin' ? 'Администратор' : 'Менеджер'}</div>
+              <div style={{
+                fontSize: '12px', fontWeight: '600', color: 'var(--text3)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {user?.name}
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text)', marginTop: '1px' }}>
+                {user?.role === 'admin' ? 'Администратор' : 'Менеджер'}
+              </div>
             </div>
           </div>
-          <button onClick={logout} style={{
-            width: '100%', padding: '8px', background: 'var(--bg3)',
-            border: '1px solid var(--border)', borderRadius: '8px',
-            cursor: 'pointer', fontSize: '12px', color: 'var(--text)', transition: 'all 0.15s',
-          }}
-            onMouseEnter={e => { e.target.style.borderColor = 'var(--red)'; e.target.style.color = 'var(--red)' }}
-            onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text)' }}
+
+          {/* Переключатель темы */}
+          <button className="theme-btn" onClick={toggleTheme}>
+            <span className="theme-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
+          </button>
+
+          {/* Выйти */}
+          <button
+            onClick={logout}
+            style={{
+              width: '100%', padding: '8px',
+              background: 'var(--bg3)', border: '1px solid var(--border)',
+              borderRadius: '8px', cursor: 'pointer', fontSize: '12px',
+              color: 'var(--text)', transition: 'all 0.15s', fontFamily: 'var(--font)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--red)'
+              e.currentTarget.style.color = 'var(--red)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)'
+              e.currentTarget.style.color = 'var(--text)'
+            }}
           >
             Выйти
           </button>
         </div>
       </aside>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <header className="mobile-header" style={{
-          display: 'none', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
-          position: 'sticky', top: 0, zIndex: 30,
-        }}>
-          <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text3)', padding: '4px' }}>☰</button>
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text3)' }}>🚗 AutoCRM</div>
-          {alertCount > 0 && (
-            <div style={{ padding: '4px 10px', borderRadius: '100px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', fontSize: '11px', color: '#ef4444', fontWeight: '700' }}>
-              🔔 {alertCount}
-            </div>
-          )}
+      {/* ─── Основной контент ─────────────────────────────────────────────── */}
+      <div className="layout-body">
+
+        {/* Мобильная шапка */}
+        <header className="mobile-header">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '22px', color: 'var(--text3)', padding: '4px', lineHeight: 1,
+            }}
+          >
+            ☰
+          </button>
+
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text3)' }}>
+            🚗 AutoCRM
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Мини-переключатель темы */}
+            <button
+              onClick={toggleTheme}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: '18px', padding: '4px', lineHeight: 1,
+              }}
+              title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+
+            {alertCount > 0 && (
+              <div style={{
+                padding: '4px 10px', borderRadius: '100px',
+                background: 'rgba(239,68,68,0.12)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                fontSize: '11px', color: '#ef4444', fontWeight: '700',
+              }}>
+                🔔 {alertCount}
+              </div>
+            )}
+          </div>
         </header>
 
-        <main className="main-content" style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+        <main className="main-content">
           <Outlet />
         </main>
       </div>

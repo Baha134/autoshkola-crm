@@ -36,12 +36,15 @@ function StatCard({ label, value, sub, color, icon, highlight }) {
         width: '110px', height: '110px',
         background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 65%)`,
       }} />
-      <div style={{
-        position: 'absolute', top: '16px', right: '18px',
-        fontSize: '20px', opacity: 0.45,
-      }}>{icon}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.07em', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text3)', lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ position: 'absolute', top: '16px', right: '18px', fontSize: '20px', opacity: 0.45 }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: '11px', color: 'var(--text)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text3)', lineHeight: 1, letterSpacing: '-0.02em' }}>
+        {value}
+      </div>
       {sub && <div style={{ fontSize: '11px', color: color, marginTop: '7px', fontWeight: '500' }}>{sub}</div>}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, ${color}30, ${color})` }} />
     </div>
@@ -51,10 +54,8 @@ function StatCard({ label, value, sub, color, icon, highlight }) {
 function Card({ title, children, action }) {
   return (
     <div style={{
-      background: 'var(--bg2)',
-      border: '1px solid var(--border)',
-      borderRadius: '12px',
-      padding: '18px 20px',
+      background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: '12px', padding: '18px 20px',
       animation: 'fadeIn 0.4s ease both',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -75,30 +76,23 @@ function Empty({ text }) {
 function LeadsChart({ data }) {
   if (!data || data.length === 0) return <Empty text="Нет данных" />
 
-  const maxVal = Math.max(...data.map(d => d.count), 1)
+  const maxVal  = Math.max(...data.map(d => d.count), 1)
   const chartH  = 80
-  const barW    = 100 / data.length
 
-  // SVG-путь для линии
-  const points = data.map((d, i) => {
+  const points  = data.map((d, i) => {
     const x = (i / (data.length - 1)) * 100
     const y = chartH - (d.count / maxVal) * chartH
     return `${x},${y}`
   })
   const linePath = 'M ' + points.join(' L ')
   const areaPath = `M ${points[0]} L ${points.join(' L ')} L 100,${chartH} L 0,${chartH} Z`
-
-  // Показываем каждые ~5 дней
   const labelIndices = new Set([0, 6, 13, 20, 27, 29])
 
   return (
     <div>
       <div style={{ position: 'relative', height: `${chartH + 8}px`, marginBottom: '4px' }}>
-        <svg
-          viewBox={`0 0 100 ${chartH}`}
-          preserveAspectRatio="none"
-          style={{ width: '100%', height: `${chartH}px`, position: 'absolute', top: 0, left: 0 }}
-        >
+        <svg viewBox={`0 0 100 ${chartH}`} preserveAspectRatio="none"
+          style={{ width: '100%', height: `${chartH}px`, position: 'absolute', top: 0, left: 0 }}>
           <defs>
             <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
@@ -108,18 +102,15 @@ function LeadsChart({ data }) {
           <path d={areaPath} fill="url(#chartGrad)" />
           <path d={linePath} fill="none" stroke="#3b82f6" strokeWidth="0.8" strokeLinejoin="round" />
           {data.map((d, i) => d.count > 0 && (
-            <circle
-              key={i}
+            <circle key={i}
               cx={(i / (data.length - 1)) * 100}
               cy={chartH - (d.count / maxVal) * chartH}
-              r="1.2"
-              fill="#3b82f6"
+              r="1.2" fill="#3b82f6"
             />
           ))}
         </svg>
       </div>
 
-      {/* Метки дней */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
         {data.map((d, i) => labelIndices.has(i) ? (
           <span key={i} style={{ fontSize: '10px', color: 'var(--text)', fontFamily: 'var(--mono)', opacity: 0.7 }}>
@@ -128,19 +119,15 @@ function LeadsChart({ data }) {
         ) : <span key={i} />)}
       </div>
 
-      {/* Бары-спарклайн */}
       <div style={{ display: 'flex', gap: '2px', marginTop: '8px', alignItems: 'flex-end', height: '28px' }}>
         {data.map((d, i) => (
-          <div
-            key={i}
+          <div key={i}
             title={`${dayjs(d.date).format('D MMM')}: ${d.count} лидов`}
             style={{
               flex: 1,
               height: `${Math.max(2, (d.count / maxVal) * 28)}px`,
               background: d.count > 0 ? '#3b82f620' : 'var(--bg4)',
-              borderRadius: '2px',
-              cursor: 'default',
-              transition: 'background 0.15s',
+              borderRadius: '2px', cursor: 'default', transition: 'background 0.15s',
               border: '1px solid transparent',
             }}
             onMouseEnter={e => { e.target.style.background = '#3b82f640'; e.target.style.borderColor = '#3b82f660' }}
@@ -149,7 +136,6 @@ function LeadsChart({ data }) {
         ))}
       </div>
 
-      {/* Итог */}
       <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text)', textAlign: 'right' }}>
         Всего за 30 дней: <span style={{ color: 'var(--text3)', fontWeight: '700', fontFamily: 'var(--mono)' }}>
           {data.reduce((s, d) => s + d.count, 0)}
@@ -165,7 +151,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/dashboard').then(r => r.data),
-    refetchInterval: 60_000, // обновляем каждую минуту
+    refetchInterval: 60_000,
   })
 
   if (isLoading) return (
@@ -196,7 +182,11 @@ export default function DashboardPage() {
     <div style={{ maxWidth: '1200px' }}>
 
       {/* ── Заголовок ── */}
-      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="page-header" style={{
+        marginBottom: '24px', display: 'flex',
+        alignItems: 'flex-end', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: '12px',
+      }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text3)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
             Дашборд
@@ -205,8 +195,6 @@ export default function DashboardPage() {
             {dayjs().format('D MMMM YYYY')} · Общая сводка
           </div>
         </div>
-
-        {/* Уведомление о сегодняшних лидах */}
         {newToday > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '8px',
@@ -220,27 +208,40 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Карточки: 6 метрик ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-        <StatCard label="Всего лидов"    value={totalLeads}                              sub={`+${newWeek} за неделю`}        color="var(--accent)"  icon="◈" />
-        <StatCard label="Новых сегодня"  value={newToday}                                sub={`+${newWeek} за 7 дней`}        color="#06b6d4"        icon="◉" highlight={newToday > 0} />
-        <StatCard label="Конверсия"      value={`${conversion}%`}                        sub={`${doneLeads} завершено`}       color="var(--green)"   icon="◎" />
-        <StatCard label="Выручка месяц"  value={monthRevenue.toLocaleString() + ' ₸'}    sub="текущий месяц"                  color="var(--purple)"  icon="◷" />
-        <StatCard label="Всего выручка"  value={totalRevenue.toLocaleString() + ' ₸'}    sub="за всё время"                   color="var(--green)"   icon="◈" />
-        <StatCard label="Общий долг"     value={totalDebt.toLocaleString() + ' ₸'}       sub={`${debtors.length} должников`}  color="var(--red)"     icon="◎" highlight={totalDebt > 0} />
+      {/* ── 6 метрик — адаптивная сетка ── */}
+      <div
+        className="stat-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '12px',
+          marginBottom: '16px',
+        }}
+      >
+        <StatCard label="Всего лидов"   value={totalLeads}                           sub={`+${newWeek} за неделю`}       color="var(--accent)"  icon="◈" />
+        <StatCard label="Новых сегодня" value={newToday}                             sub={`+${newWeek} за 7 дней`}       color="#06b6d4"        icon="◉" highlight={newToday > 0} />
+        <StatCard label="Конверсия"     value={`${conversion}%`}                     sub={`${doneLeads} завершено`}      color="var(--green)"   icon="◎" />
+        <StatCard label="Выручка месяц" value={monthRevenue.toLocaleString() + ' ₸'} sub="текущий месяц"                 color="var(--purple)"  icon="◷" />
+        <StatCard label="Всего выручка" value={totalRevenue.toLocaleString() + ' ₸'} sub="за всё время"                  color="var(--green)"   icon="◈" />
+        <StatCard label="Общий долг"    value={totalDebt.toLocaleString() + ' ₸'}    sub={`${debtors.length} должников`} color="var(--red)"     icon="◎" highlight={totalDebt > 0} />
       </div>
 
       {/* ── Строка 2: статусы + график ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '12px', marginBottom: '12px' }}>
-
-        {/* По статусам */}
+      <div
+        className="dash-row-2"
+        style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '12px', marginBottom: '12px' }}
+      >
         <Card title="По статусам">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {byStatus.map(({ status, count }) => (
               <div key={status}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: STATUS_COLORS[status], boxShadow: `0 0 6px ${STATUS_COLORS[status]}80` }} />
+                    <div style={{
+                      width: '7px', height: '7px', borderRadius: '50%',
+                      background: STATUS_COLORS[status],
+                      boxShadow: `0 0 6px ${STATUS_COLORS[status]}80`,
+                    }} />
                     <span style={{ fontSize: '12px', color: 'var(--text2)' }}>{STATUS_LABELS[status]}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -249,7 +250,11 @@ export default function DashboardPage() {
                         {Math.round(count / totalLeads * 100)}%
                       </span>
                     )}
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: STATUS_COLORS[status], fontFamily: 'var(--mono)', minWidth: '24px', textAlign: 'right' }}>
+                    <span style={{
+                      fontSize: '13px', fontWeight: '700',
+                      color: STATUS_COLORS[status], fontFamily: 'var(--mono)',
+                      minWidth: '24px', textAlign: 'right',
+                    }}>
                       {count}
                     </span>
                   </div>
@@ -269,16 +274,20 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* График лидов за 30 дней */}
         <Card title="Лиды за последние 30 дней">
           <LeadsChart data={chartDays} />
         </Card>
       </div>
 
       {/* ── Строка 3: долги + менеджеры ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: managerStats?.length > 0 ? '1fr 1fr' : '1fr', gap: '12px' }}>
-
-        {/* Долги */}
+      <div
+        className="grid-2-1"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: managerStats?.length > 0 ? '1fr 1fr' : '1fr',
+          gap: '12px',
+        }}
+      >
         <Card
           title={`Должники (${debtors.length})`}
           action={totalDebt > 0 && (
@@ -305,7 +314,7 @@ export default function DashboardPage() {
                     <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '1px' }}>
                       {d.phone}
                       {d.courseAmount > 0 && (
-                        <span style={{ marginLeft: '6px', color: 'var(--text)' }}>
+                        <span style={{ marginLeft: '6px' }}>
                           · оплачено {d.paid.toLocaleString()} / {d.courseAmount.toLocaleString()} ₸
                         </span>
                       )}
@@ -323,7 +332,6 @@ export default function DashboardPage() {
           )}
         </Card>
 
-        {/* Статистика менеджеров (только для admin) */}
         {managerStats?.length > 0 && (
           <Card title="Менеджеры">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -335,7 +343,6 @@ export default function DashboardPage() {
                   border: `1px solid ${m.id === null ? 'rgba(239,68,68,0.18)' : 'var(--border)'}`,
                   borderRadius: '8px',
                 }}>
-                  {/* Аватар */}
                   <div style={{
                     width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
                     background: m.id === null
@@ -347,22 +354,20 @@ export default function DashboardPage() {
                   }}>
                     {m.id === null ? '?' : m.name[0].toUpperCase()}
                   </div>
-
-                  {/* Имя + прогресс */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: m.id === null ? 'var(--red)' : 'var(--text3)' }}>{m.name}</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: m.id === null ? 'var(--red)' : 'var(--text3)' }}>
+                        {m.name}
+                      </span>
                       <span style={{ fontSize: '12px', color: 'var(--text)', fontFamily: 'var(--mono)' }}>
-                        {m.total} лидов · {m.conversion}%
+                        {m.total} · {m.conversion}%
                       </span>
                     </div>
                     <div style={{ height: '3px', background: 'var(--bg4)', borderRadius: '2px', overflow: 'hidden' }}>
                       <div style={{
-                        height: '100%',
-                        width: `${m.conversion}%`,
+                        height: '100%', width: `${m.conversion}%`,
                         background: m.id === null ? 'var(--red)' : 'var(--green)',
-                        borderRadius: '2px',
-                        transition: 'width 0.6s ease',
+                        borderRadius: '2px', transition: 'width 0.6s ease',
                       }} />
                     </div>
                   </div>
