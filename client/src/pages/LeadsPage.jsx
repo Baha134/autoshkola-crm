@@ -4,9 +4,9 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 
-const STATUSES = ['new', 'in_progress', 'done', 'rejected']
-const STATUS_LABELS = { new: 'Новый', in_progress: 'В работе', done: 'Готов', rejected: 'Отказ' }
-const STATUS_COLORS = { new: '#3b82f6', in_progress: '#f59e0b', done: '#10b981', rejected: '#ef4444' }
+const STATUSES = ['new', 'contacted', 'enrolled', 'studying', 'graduated', 'rejected']
+const STATUS_LABELS = { new: 'Новый', contacted: 'Связались', enrolled: 'Записан', studying: 'Учится', graduated: 'Сдал экзамен', rejected: 'Отказ' }
+const STATUS_COLORS = { new: '#3b82f6', contacted: '#f59e0b', enrolled: '#8b5cf6', studying: '#06b6d4', graduated: '#10b981', rejected: '#ef4444' }
 const SOURCES = ['manual', 'whatsapp', 'instagram', 'website']
 const SOURCE_LABELS = { manual: 'Вручную', whatsapp: 'WhatsApp', instagram: 'Instagram', website: 'Сайт' }
 const EVENT_TYPES = ['comment', 'call', 'status_change']
