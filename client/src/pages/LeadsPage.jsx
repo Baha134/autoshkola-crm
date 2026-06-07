@@ -964,7 +964,14 @@ export default function LeadsPage() {
     setEditLead(lead)
     setForm({
       name: lead.name,
-      phone: lead.phone,
+      phone: (() => {
+        const d = (lead.phone || '').replace(/\D/g, '').slice(0, 11)
+        if (d.length < 2) return d
+        if (d.length <= 4) return `+7 (${d.slice(1)}`
+        if (d.length <= 7) return `+7 (${d.slice(1, 4)}) ${d.slice(4)}`
+        if (d.length <= 9) return `+7 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+        return `+7 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7, 9)}-${d.slice(9, 11)}`
+      })(),
       source: lead.source,
       status: lead.status,
       comment: lead.comment || '',
@@ -1115,7 +1122,27 @@ export default function LeadsPage() {
           </h3>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <input placeholder="Имя *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required style={inputStyle} />
-            <input placeholder="Телефон *" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required style={inputStyle} />
+            <input
+  placeholder="+7 (___) ___-__-__"
+  value={form.phone}
+  onChange={e => {
+    // Оставляем только цифры
+    const digits = e.target.value.replace(/\D/g, '')
+    // Обрезаем до 11 цифр
+    const d = digits.slice(0, 11)
+    // Форматируем
+    let formatted = ''
+    if (d.length === 0) formatted = ''
+    else if (d.length <= 1) formatted = `+7`
+    else if (d.length <= 4) formatted = `+7 (${d.slice(1)}`
+    else if (d.length <= 7) formatted = `+7 (${d.slice(1, 4)}) ${d.slice(4)}`
+    else if (d.length <= 9) formatted = `+7 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+    else formatted = `+7 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7, 9)}-${d.slice(9, 11)}`
+    setForm({ ...form, phone: formatted })
+  }}
+  required
+  style={inputStyle}
+/>
             <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
               {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
             </select>
