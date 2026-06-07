@@ -442,7 +442,7 @@ function LeadHistory({ leadId }) {
       ) : events.length === 0 ? (
         <div style={{ color: 'var(--text)', fontSize: '13px', marginBottom: '12px' }}>Событий пока нет</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px', maxHeight: '220px', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px', maxHeight: '220px', overflowY: 'scroll' }}>
           {events.map(ev => (
             <div key={ev.id} style={{
               display: 'flex', gap: '10px', alignItems: 'flex-start',
@@ -606,7 +606,7 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
     <div
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000,
-        overflowY: 'auto', padding: '40px 20px',
+        overflowY: 'scroll', padding: '40px 20px',
       }}
       onClick={onClose}
     >
