@@ -318,7 +318,8 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
     <div
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '20px', paddingTop: '40px', overflowY: 'auto',
       }}
       onClick={onClose}
     >
