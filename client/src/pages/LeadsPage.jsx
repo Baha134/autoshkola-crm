@@ -961,6 +961,7 @@ export default function LeadsPage() {
   }
 
   const handleEdit = (lead) => {
+    setModalLead(null)
     setEditLead(lead)
     setForm({
       name: lead.name,
