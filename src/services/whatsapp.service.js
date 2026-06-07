@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 let sock = null
 let reconnectCount = 0
 const MAX_RECONNECTS = 5
-const RECONNECT_DELAY = 10000 // 10 секунд между попытками
+const RECONNECT_DELAY = 10000
 
 async function startWhatsApp() {
   try {
@@ -38,12 +38,14 @@ async function startWhatsApp() {
 
         if (isLoggedOut) {
           console.log('❌ WhatsApp: сессия завершена (loggedOut). Переподключение не нужно.')
+          sock = null
           return
         }
 
         if (reconnectCount >= MAX_RECONNECTS) {
           console.log(`⛔ WhatsApp: превышен лимит переподключений (${MAX_RECONNECTS}). Остановлено.`)
           console.log('   CRM работает в обычном режиме без WhatsApp.')
+          sock = null
           return
         }
 
@@ -52,7 +54,7 @@ async function startWhatsApp() {
         setTimeout(() => startWhatsApp(), RECONNECT_DELAY)
 
       } else if (connection === 'open') {
-        reconnectCount = 0 // сбрасываем счётчик при успешном подключении
+        reconnectCount = 0
         console.log('✅ WhatsApp подключён!')
       }
     })
@@ -100,4 +102,18 @@ async function startWhatsApp() {
   }
 }
 
-module.exports = { startWhatsApp }
+// ─── Отправить сообщение конкретному номеру ───────────────────────────────────
+async function sendMessage(phone, text) {
+  if (!sock) throw new Error('WhatsApp не подключён к серверу')
+  const clean = phone.replace(/\D/g, '')
+  const jid = `${clean}@s.whatsapp.net`
+  await sock.sendMessage(jid, { text })
+  console.log(`📤 Отправлено сообщение на ${clean}: ${text.slice(0, 60)}...`)
+}
+
+// ─── Проверить статус подключения ────────────────────────────────────────────
+function getStatus() {
+  return sock !== null
+}
+
+module.exports = { startWhatsApp, sendMessage, getStatus }

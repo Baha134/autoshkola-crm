@@ -35,6 +35,14 @@ function fmt(n) {
   return Number(n).toLocaleString('ru-RU') + ' ₸'
 }
 
+function cleanPhone(phone) {
+  return (phone || '').replace(/\D/g, '')
+}
+
+function openWhatsApp(phone) {
+  window.open(`https://wa.me/${cleanPhone(phone)}`, '_blank')
+}
+
 function isCallToday(lead) {
   if (!lead.nextCallAt) return false
   return dayjs(lead.nextCallAt).isSame(dayjs(), 'day')
@@ -56,7 +64,6 @@ function FinanceBlock({ lead, onUpdate }) {
   const [payNote, setPayNote] = useState('')
   const [payMethod, setPayMethod] = useState('cash')
 
-  // Загружаем платежи этого лида
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ['payments', lead.id],
     queryFn: () => api.get(`/payments/lead/${lead.id}`).then(r => r.data),
@@ -87,7 +94,6 @@ function FinanceBlock({ lead, onUpdate }) {
     },
   })
 
-  // Считаем paid/debt из актуальных платежей (не из кэша лида)
   const paid = payments.reduce((s, p) => s + p.amount, 0)
   const debt = Math.max(0, Number(courseAmount) - paid)
   const paidPct = Number(courseAmount) > 0 ? Math.min(100, Math.round((paid / Number(courseAmount)) * 100)) : 0
@@ -109,7 +115,6 @@ function FinanceBlock({ lead, onUpdate }) {
     <div style={{ padding: '16px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
       <div style={sectionTitle}>💰 Финансы</div>
 
-      {/* Прогресс оплаты */}
       <div style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
           <span style={{ fontSize: '11px', color: 'var(--text)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -130,7 +135,6 @@ function FinanceBlock({ lead, onUpdate }) {
         </div>
       </div>
 
-      {/* Три карточки */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
         {[
           { label: 'Стоимость', value: fmt(Number(courseAmount) || 0), color: 'var(--text3)' },
@@ -149,7 +153,6 @@ function FinanceBlock({ lead, onUpdate }) {
         ))}
       </div>
 
-      {/* Редактировать стоимость курса */}
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <input
@@ -166,7 +169,6 @@ function FinanceBlock({ lead, onUpdate }) {
         </button>
       </div>
 
-      {/* ── История платежей ── */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -186,7 +188,6 @@ function FinanceBlock({ lead, onUpdate }) {
           )}
         </div>
 
-        {/* Форма добавления платежа */}
         {showAddPayment && (
           <form onSubmit={handleAddPayment} style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
@@ -231,17 +232,13 @@ function FinanceBlock({ lead, onUpdate }) {
               >
                 {createPayment.isPending ? '...' : '✓ Сохранить'}
               </button>
-              <button
-                type="button" onClick={() => setShowAddPayment(false)}
-                style={btnSecondary}
-              >
+              <button type="button" onClick={() => setShowAddPayment(false)} style={btnSecondary}>
                 Отмена
               </button>
             </div>
           </form>
         )}
 
-        {/* Список платежей */}
         {paymentsLoading ? (
           <div style={{ fontSize: '12px', color: 'var(--text)', opacity: 0.6, padding: '6px 0' }}>Загрузка...</div>
         ) : payments.length === 0 ? (
@@ -486,12 +483,124 @@ function LeadHistory({ leadId }) {
   )
 }
 
+// ─── Компонент: Блок WhatsApp в модалке ──────────────────────────────────────
+
+function WhatsAppBlock({ lead }) {
+  const [sending, setSending] = useState(false)
+  const [customText, setCustomText] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
+
+  const defaultText = `Здравствуйте, ${lead.name}! Это автошкола. Напоминаем о вашей заявке. Ждём вас! 🚗`
+
+  const handleSend = async (text) => {
+    setSending(true)
+    try {
+      await api.post(`/leads/${lead.id}/send-whatsapp`, { text })
+      toast.success('✓ Сообщение отправлено в WhatsApp')
+      setShowCustom(false)
+      setCustomText('')
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Ошибка отправки')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div style={{
+      marginTop: '10px', padding: '16px', background: 'var(--bg3)',
+      borderRadius: '10px', border: '1px solid var(--border)',
+    }}>
+      <div style={sectionTitle}>💬 WhatsApp</div>
+
+      {/* Быстрые кнопки */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: showCustom ? '12px' : '0' }}>
+        {/* Открыть чат */}
+        <button
+          onClick={() => openWhatsApp(lead.phone)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 16px', background: '#25D36618', color: '#25D366',
+            border: '1px solid #25D36630', borderRadius: '8px',
+            cursor: 'pointer', fontSize: '13px', fontWeight: '600',
+          }}
+        >
+          💬 Открыть чат
+        </button>
+
+        {/* Отправить шаблон */}
+        <button
+          onClick={() => handleSend(defaultText)}
+          disabled={sending}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '8px 16px', background: 'var(--bg2)', color: 'var(--text2)',
+            border: '1px solid var(--border)', borderRadius: '8px',
+            cursor: sending ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: '500',
+            opacity: sending ? 0.6 : 1,
+          }}
+        >
+          {sending ? '...' : '📤 Отправить приветствие'}
+        </button>
+
+        {/* Своё сообщение */}
+        <button
+          onClick={() => setShowCustom(v => !v)}
+          style={{
+            padding: '8px 16px', background: 'var(--bg2)', color: 'var(--text2)',
+            border: '1px solid var(--border)', borderRadius: '8px',
+            cursor: 'pointer', fontSize: '13px', fontWeight: '500',
+          }}
+        >
+          ✏️ Своё сообщение
+        </button>
+      </div>
+
+      {/* Форма своего сообщения */}
+      {showCustom && (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <textarea
+            value={customText}
+            onChange={e => setCustomText(e.target.value)}
+            placeholder="Введите текст сообщения..."
+            rows={2}
+            style={{
+              ...inputStyle, flex: 1, resize: 'vertical', fontFamily: 'inherit',
+            }}
+          />
+          <button
+            onClick={() => customText.trim() && handleSend(customText.trim())}
+            disabled={!customText.trim() || sending}
+            style={{
+              ...btnPrimary,
+              opacity: !customText.trim() || sending ? 0.5 : 1,
+              cursor: !customText.trim() || sending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {sending ? '...' : 'Отправить'}
+          </button>
+        </div>
+      )}
+
+      {/* Подсказка шаблона */}
+      <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text)', opacity: 0.5, lineHeight: '1.4' }}>
+        Шаблон: «{defaultText}»
+      </div>
+    </div>
+  )
+}
+
 // ─── Компонент: Модалка карточки лида ────────────────────────────────────────
 
 function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
   const color = STATUS_COLORS[lead.status]
   const today = isCallToday(lead)
   const overdue = isCallOverdue(lead)
+
+  const handleCopyPhone = () => {
+    navigator.clipboard.writeText(lead.phone)
+    toast.success('Номер скопирован')
+  }
 
   return (
     <div
@@ -519,12 +628,44 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text3)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
               {lead.name}
             </div>
-            <a
-              href={`tel:${lead.phone}`}
-              style={{ fontSize: '15px', color: 'var(--accent2)', fontFamily: 'var(--mono)', marginBottom: '10px', display: 'block', textDecoration: 'none' }}
-            >
-              📞 {lead.phone}
-            </a>
+
+            {/* ── Телефон + кнопки WhatsApp / копировать ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <a
+                href={`tel:${lead.phone}`}
+                style={{ fontSize: '15px', color: 'var(--accent2)', fontFamily: 'var(--mono)', textDecoration: 'none' }}
+              >
+                📞 {lead.phone}
+              </a>
+
+              {/* Кнопка WhatsApp */}
+              <button
+                onClick={() => openWhatsApp(lead.phone)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '3px 10px', background: '#25D36618', color: '#25D366',
+                  border: '1px solid #25D36630', borderRadius: '6px',
+                  cursor: 'pointer', fontSize: '12px', fontWeight: '600',
+                }}
+                title="Открыть в WhatsApp"
+              >
+                💬 WA
+              </button>
+
+              {/* Копировать номер */}
+              <button
+                onClick={handleCopyPhone}
+                style={{
+                  padding: '3px 10px', background: 'var(--bg4)', color: 'var(--text)',
+                  border: '1px solid var(--border)', borderRadius: '6px',
+                  cursor: 'pointer', fontSize: '12px',
+                }}
+                title="Скопировать номер"
+              >
+                📋
+              </button>
+            </div>
+
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{
                 padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700',
@@ -584,10 +725,12 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
           </div>
         )}
 
-        {/* ── Финансы (включая платежи) ── */}
+        {/* ── Финансы + звонок ── */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <FinanceBlock lead={lead} onUpdate={onUpdate} />
           <NextCallBlock lead={lead} onUpdate={onUpdate} />
+          {/* ── WhatsApp блок ── */}
+          <WhatsAppBlock lead={lead} />
         </div>
 
         {/* ── История ── */}
@@ -669,7 +812,13 @@ function LeadCard({ lead, onEdit, onDelete, onDragStart, onClick }) {
             </span>
           )}
         </div>
+        {/* ── Кнопки действий в канбан карточке ── */}
         <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => openWhatsApp(lead.phone)}
+            style={iconBtn('#25D366')}
+            title="WhatsApp"
+          >💬</button>
           <button onClick={() => onEdit(lead)} style={iconBtn('#3b82f6')}>✏️</button>
           <button onClick={() => { if (confirm('Удалить лид?')) onDelete(lead.id) }} style={iconBtn('#ef4444')}>🗑️</button>
         </div>
@@ -1050,7 +1199,18 @@ export default function LeadsPage() {
                           <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: expandedId === lead.id ? 'rotate(90deg)' : 'none' }}>▶</span>
                         </td>
                         <td style={{ padding: '12px 14px', fontSize: '14px', fontWeight: '600', color: 'var(--text3)', whiteSpace: 'nowrap' }}>{lead.name}</td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }}>{lead.phone}</td>
+                        {/* Телефон с копированием */}
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span
+                              style={{ fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)', cursor: 'pointer' }}
+                              onClick={() => { navigator.clipboard.writeText(lead.phone); toast.success('Номер скопирован') }}
+                              title="Нажми чтобы скопировать"
+                            >
+                              {lead.phone}
+                            </span>
+                          </div>
+                        </td>
                         <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text)' }}>{SOURCE_LABELS[lead.source] || lead.source}</td>
                         <td style={{ padding: '12px 14px' }}><StatusBadge status={lead.status} /></td>
                         <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
@@ -1086,6 +1246,12 @@ export default function LeadsPage() {
                         </td>
                         <td style={{ padding: '12px 14px' }} onClick={e => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: '4px' }}>
+                            {/* Кнопка WhatsApp в таблице */}
+                            <button
+                              onClick={() => openWhatsApp(lead.phone)}
+                              style={iconBtn('#25D366')}
+                              title="WhatsApp"
+                            >💬</button>
                             <button onClick={() => setModalLead(lead)} style={iconBtn('#10b981')} title="Карточка">👁️</button>
                             <button onClick={() => handleEdit(lead)} style={iconBtn('#3b82f6')} title="Редактировать">✏️</button>
                             <button onClick={() => { if (confirm('Удалить лид?')) deleteMutation.mutate(lead.id) }} style={iconBtn('#ef4444')} title="Удалить">🗑️</button>
