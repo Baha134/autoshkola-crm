@@ -1,3 +1,6 @@
+// ПОЛНЫЙ ФАЙЛ: client/src/App.jsx
+// Изменения: добавлен import RemindersPage + Route для /reminders
+
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './store/auth.store'
@@ -7,11 +10,10 @@ import DashboardPage from './pages/DashboardPage'
 import LeadsPage from './pages/LeadsPage'
 import PaymentsPage from './pages/PaymentsPage'
 import UsersPage from './pages/UsersPage'
+import RemindersPage from './pages/RemindersPage'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://autoshkola-crm-production.up.railway.app/api'
 
-// ✅ Будим сервер сразу при открытии сайта — пока пользователь видит логин,
-// Railway уже просыпается. К моменту входа сервер уже готов.
 function useWakeUpServer() {
   useEffect(() => {
     fetch(`${API_URL.replace('/api', '')}/ping`)
@@ -34,6 +36,7 @@ export default function App() {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route path="reminders" element={<RemindersPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="users" element={<UsersPage />} />
       </Route>
