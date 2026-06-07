@@ -44,7 +44,7 @@ model Payment {
   id        Int      @id @default(autoincrement())
   leadId    Int
   amount    Float
-  method    String   @default("cash")   // ← добавить эту строку
+  method    String   @default("cash")   
   note      String?
   createdAt DateTime @default(now())
   lead      Lead     @relation(fields: [leadId], references: [id])

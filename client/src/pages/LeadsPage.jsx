@@ -22,6 +22,12 @@ const EVENT_LABELS = { comment: '💬 Комментарий', call: '📞 Зв�
 const EVENT_ICONS = { comment: '💬', call: '📞', status_change: '🔄' }
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
+const METHOD_LABELS = {
+  cash:     { label: 'Наличные', icon: '💵', color: '#10b981' },
+  card:     { label: 'Карта',    icon: '💳', color: '#3b82f6' },
+  transfer: { label: 'Перевод',  icon: '📲', color: '#8b5cf6' },
+}
+
 // ─── Утилиты ────────────────────────────────────────────────────────────────
 
 function fmt(n) {
@@ -39,25 +45,68 @@ function isCallOverdue(lead) {
   return dayjs(lead.nextCallAt).isBefore(dayjs(), 'day')
 }
 
-// ─── Компонент: Финансовый блок ──────────────────────────────────────────────
+// ─── Компонент: Финансовый блок (с платежами) ────────────────────────────────
 
 function FinanceBlock({ lead, onUpdate }) {
+  const qc = useQueryClient()
   const [courseAmount, setCourseAmount] = useState(lead.courseAmount ?? 0)
-  const [saving, setSaving] = useState(false)
+  const [savingCourse, setSavingCourse] = useState(false)
+  const [showAddPayment, setShowAddPayment] = useState(false)
+  const [payAmount, setPayAmount] = useState('')
+  const [payNote, setPayNote] = useState('')
+  const [payMethod, setPayMethod] = useState('cash')
 
-  const paid = lead.paid ?? 0
-  const debt = Math.max(0, courseAmount - paid)
-  const paidPct = courseAmount > 0 ? Math.min(100, Math.round((paid / courseAmount) * 100)) : 0
+  // Загружаем платежи этого лида
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ['payments', lead.id],
+    queryFn: () => api.get(`/payments/lead/${lead.id}`).then(r => r.data),
+  })
 
-  const handleSave = async () => {
-    setSaving(true)
+  const createPayment = useMutation({
+    mutationFn: data => api.post('/payments', data),
+    onSuccess: () => {
+      qc.invalidateQueries(['payments', lead.id])
+      qc.invalidateQueries(['payments-all'])
+      qc.invalidateQueries(['leads'])
+      toast.success('✓ Платёж добавлен')
+      setShowAddPayment(false)
+      setPayAmount('')
+      setPayNote('')
+      setPayMethod('cash')
+    },
+    onError: e => toast.error(e.response?.data?.error || 'Ошибка'),
+  })
+
+  const deletePayment = useMutation({
+    mutationFn: id => api.delete(`/payments/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries(['payments', lead.id])
+      qc.invalidateQueries(['payments-all'])
+      qc.invalidateQueries(['leads'])
+      toast.success('Платёж удалён')
+    },
+  })
+
+  // Считаем paid/debt из актуальных платежей (не из кэша лида)
+  const paid = payments.reduce((s, p) => s + p.amount, 0)
+  const debt = Math.max(0, Number(courseAmount) - paid)
+  const paidPct = Number(courseAmount) > 0 ? Math.min(100, Math.round((paid / Number(courseAmount)) * 100)) : 0
+
+  const handleSaveCourse = async () => {
+    setSavingCourse(true)
     await onUpdate({ courseAmount: Number(courseAmount) })
-    setSaving(false)
+    setSavingCourse(false)
     toast.success('Стоимость курса сохранена')
   }
 
+  const handleAddPayment = (e) => {
+    e.preventDefault()
+    if (!payAmount || Number(payAmount) <= 0) return toast.error('Введи сумму')
+    createPayment.mutate({ leadId: lead.id, amount: Number(payAmount), note: payNote, method: payMethod })
+  }
+
   return (
-    <div style={{ marginTop: '0', padding: '16px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+    <div style={{ padding: '16px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
       <div style={sectionTitle}>💰 Финансы</div>
 
       {/* Прогресс оплаты */}
@@ -67,7 +116,7 @@ function FinanceBlock({ lead, onUpdate }) {
             Оплачено {paidPct}%
           </span>
           <span style={{ fontSize: '11px', color: paidPct === 100 ? '#10b981' : 'var(--text)', fontWeight: '600' }}>
-            {fmt(paid)} / {fmt(courseAmount)}
+            {fmt(paid)} / {fmt(Number(courseAmount) || 0)}
           </span>
         </div>
         <div style={{ height: '6px', background: 'var(--bg4)', borderRadius: '99px', overflow: 'hidden' }}>
@@ -84,9 +133,9 @@ function FinanceBlock({ lead, onUpdate }) {
       {/* Три карточки */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
         {[
-          { label: 'Стоимость', value: fmt(courseAmount), color: 'var(--text3)' },
-          { label: 'Оплачено', value: fmt(paid), color: '#10b981' },
-          { label: 'Долг', value: debt > 0 ? fmt(debt) : '—', color: debt > 0 ? '#ef4444' : '#10b981' },
+          { label: 'Стоимость', value: fmt(Number(courseAmount) || 0), color: 'var(--text3)' },
+          { label: 'Оплачено',  value: fmt(paid),                       color: '#10b981' },
+          { label: 'Долг',      value: debt > 0 ? fmt(debt) : '—',      color: debt > 0 ? '#ef4444' : '#10b981' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
@@ -101,7 +150,7 @@ function FinanceBlock({ lead, onUpdate }) {
       </div>
 
       {/* Редактировать стоимость курса */}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <input
             type="number"
@@ -112,9 +161,139 @@ function FinanceBlock({ lead, onUpdate }) {
           />
           <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text)' }}>₸</span>
         </div>
-        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
-          {saving ? '...' : 'Сохранить'}
+        <button onClick={handleSaveCourse} disabled={savingCourse} style={btnPrimary}>
+          {savingCourse ? '...' : 'Сохранить'}
         </button>
+      </div>
+
+      {/* ── История платежей ── */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            📋 История платежей
+          </span>
+          {!showAddPayment && (
+            <button
+              onClick={() => setShowAddPayment(true)}
+              style={{
+                padding: '4px 12px', fontSize: '12px', fontWeight: '600',
+                background: 'rgba(16,185,129,0.12)', color: 'var(--green)',
+                border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px', cursor: 'pointer',
+              }}
+            >
+              + Принять оплату
+            </button>
+          )}
+        </div>
+
+        {/* Форма добавления платежа */}
+        {showAddPayment && (
+          <form onSubmit={handleAddPayment} style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: '8px', padding: '12px', marginBottom: '10px',
+            animation: 'slideDown 0.2s ease both',
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={labelSm}>Сумма (₸) *</label>
+                <input
+                  type="number" placeholder="50000" value={payAmount} min="1"
+                  onChange={e => setPayAmount(e.target.value)}
+                  style={inputStyle} autoFocus
+                />
+              </div>
+              <div>
+                <label style={labelSm}>Метод оплаты</label>
+                <select value={payMethod} onChange={e => setPayMethod(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                  {Object.entries(METHOD_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v.icon} {v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={labelSm}>Примечание</label>
+                <input
+                  placeholder="1-й взнос, рассрочка..."
+                  value={payNote} onChange={e => setPayNote(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+              <button
+                type="submit"
+                disabled={createPayment.isPending}
+                style={{
+                  padding: '7px 16px', background: 'rgba(16,185,129,0.15)',
+                  border: '1px solid rgba(16,185,129,0.3)', borderRadius: '7px',
+                  color: 'var(--green)', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                }}
+              >
+                {createPayment.isPending ? '...' : '✓ Сохранить'}
+              </button>
+              <button
+                type="button" onClick={() => setShowAddPayment(false)}
+                style={btnSecondary}
+              >
+                Отмена
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Список платежей */}
+        {paymentsLoading ? (
+          <div style={{ fontSize: '12px', color: 'var(--text)', opacity: 0.6, padding: '6px 0' }}>Загрузка...</div>
+        ) : payments.length === 0 ? (
+          <div style={{ fontSize: '12px', color: 'var(--text)', opacity: 0.45, padding: '6px 0', textAlign: 'center' }}>
+            Платежей пока нет
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {payments.map(p => {
+              const m = METHOD_LABELS[p.method || 'cash'] || METHOD_LABELS.cash
+              return (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 10px', background: 'var(--bg2)',
+                  border: '1px solid var(--border)', borderRadius: '8px',
+                }}>
+                  <span style={{ fontSize: '15px' }}>{m.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', fontFamily: 'var(--mono)' }}>
+                      +{p.amount.toLocaleString()} ₸
+                    </div>
+                    {p.note && (
+                      <div style={{ fontSize: '11px', color: 'var(--text)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.note}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text)', fontFamily: 'var(--mono)' }}>
+                      {dayjs(p.createdAt).format('DD.MM.YYYY')}
+                    </div>
+                    <div style={{
+                      fontSize: '10px', padding: '1px 7px', borderRadius: '100px', marginTop: '2px',
+                      background: m.color + '18', color: m.color, border: `1px solid ${m.color}30`,
+                      display: 'inline-block',
+                    }}>
+                      {m.label}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { if (confirm('Удалить платёж?')) deletePayment.mutate(p.id) }}
+                    style={{
+                      padding: '4px 8px', background: 'rgba(239,68,68,0.08)',
+                      border: '1px solid rgba(239,68,68,0.15)', borderRadius: '6px',
+                      cursor: 'pointer', fontSize: '12px', flexShrink: 0,
+                    }}
+                  >🗑️</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -288,7 +467,7 @@ function LeadHistory({ leadId }) {
         </div>
       )}
       <form onSubmit={handleAdd} style={{ display: 'flex', gap: '8px' }}>
-        <select value={type} onChange={e => setType(e.target.value)} style={selectStyle}>
+        <select value={type} onChange={e => setType(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', width: 'auto' }}>
           {EVENT_TYPES.map(t => <option key={t} value={t}>{EVENT_LABELS[t]}</option>)}
         </select>
         <input
@@ -405,7 +584,7 @@ function LeadModal({ lead, users, onClose, onEdit, onDelete, onUpdate }) {
           </div>
         )}
 
-        {/* ── Финансы ── */}
+        {/* ── Финансы (включая платежи) ── */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <FinanceBlock lead={lead} onUpdate={onUpdate} />
           <NextCallBlock lead={lead} onUpdate={onUpdate} />
@@ -451,7 +630,6 @@ function LeadCard({ lead, onEdit, onDelete, onDragStart, onClick }) {
       <div style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text3)', marginBottom: '4px' }}>{lead.name}</div>
       <div style={{ fontSize: '12px', color: 'var(--text2)', fontFamily: 'var(--mono)', marginBottom: '4px' }}>{lead.phone}</div>
 
-      {/* Финансы на карточке */}
       {lead.courseAmount > 0 && (
         <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
           {debt > 0 ? (
@@ -466,7 +644,6 @@ function LeadCard({ lead, onEdit, onDelete, onDragStart, onClick }) {
         </div>
       )}
 
-      {/* Звонок */}
       {lead.nextCallAt && (
         <div style={{ fontSize: '11px', color: overdue ? '#ef4444' : today ? '#f59e0b' : 'var(--text)', marginBottom: '4px', fontWeight: overdue || today ? '600' : '400' }}>
           {overdue ? '⚠️' : today ? '🔔' : '📅'} {dayjs(lead.nextCallAt).format('DD.MM.YYYY')}
@@ -546,7 +723,6 @@ function KanbanBoard({ leads, onEdit, onDelete, onStatusChange, onCardClick }) {
                 {col.length}
               </span>
             </div>
-            {/* Суммарный долг по колонке */}
             {totalDebt > 0 && (
               <div style={{ fontSize: '11px', color: '#ef4444', marginBottom: '8px', fontWeight: '600' }}>
                 Общий долг: {fmt(totalDebt)}
@@ -599,7 +775,6 @@ export default function LeadsPage() {
     queryFn: () => api.get('/users').then(r => r.data),
   })
 
-  // При открытии модалки — берём актуальные данные из кэша
   const activeLead = useMemo(() => {
     if (!modalLead) return null
     return leads.find(l => l.id === modalLead.id) || modalLead
@@ -651,7 +826,6 @@ export default function LeadsPage() {
     setShowForm(true)
   }
 
-  // Обновление отдельных полей из модалки (финансы, звонок, расписание)
   const handleModalUpdate = async (data) => {
     if (!activeLead) return
     await api.put(`/leads/${activeLead.id}`, { ...activeLead, ...data })
@@ -676,10 +850,8 @@ export default function LeadsPage() {
     })
   }, [leads, search, filterStatus, filterSource])
 
-  // Лиды с звонком сегодня
   const callsToday = leads.filter(isCallToday)
   const callsOverdue = leads.filter(isCallOverdue)
-
   const hasFilters = search || filterStatus || filterSource
 
   if (isLoading) return (
@@ -692,7 +864,6 @@ export default function LeadsPage() {
   return (
     <div style={{ maxWidth: viewMode === 'kanban' ? '100%' : '1100px', animation: 'fadeIn 0.3s ease both' }}>
 
-      {/* ── Модалка карточки лида ── */}
       {activeLead && (
         <LeadModal
           lead={activeLead}
@@ -734,22 +905,12 @@ export default function LeadsPage() {
 
       {/* ── Баннеры напоминаний ── */}
       {callsOverdue.length > 0 && (
-        <div style={{
-          marginBottom: '12px', padding: '12px 16px', borderRadius: '10px',
-          background: '#ef444410', border: '1px solid #ef444430',
-          display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
-        }}>
+        <div style={{ marginBottom: '12px', padding: '12px 16px', borderRadius: '10px', background: '#ef444410', border: '1px solid #ef444430', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '14px' }}>⚠️</span>
-          <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
-            Просроченных звонков: {callsOverdue.length}
-          </span>
+          <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>Просроченных звонков: {callsOverdue.length}</span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {callsOverdue.slice(0, 4).map(l => (
-              <button key={l.id} onClick={() => setModalLead(l)} style={{
-                fontSize: '12px', padding: '3px 10px', borderRadius: '99px',
-                background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440',
-                cursor: 'pointer', fontWeight: '500',
-              }}>
+              <button key={l.id} onClick={() => setModalLead(l)} style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '99px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', cursor: 'pointer', fontWeight: '500' }}>
                 {l.name}
               </button>
             ))}
@@ -759,22 +920,12 @@ export default function LeadsPage() {
       )}
 
       {callsToday.length > 0 && (
-        <div style={{
-          marginBottom: '12px', padding: '12px 16px', borderRadius: '10px',
-          background: '#f59e0b10', border: '1px solid #f59e0b30',
-          display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
-        }}>
+        <div style={{ marginBottom: '12px', padding: '12px 16px', borderRadius: '10px', background: '#f59e0b10', border: '1px solid #f59e0b30', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '14px' }}>🔔</span>
-          <span style={{ fontSize: '13px', color: '#f59e0b', fontWeight: '600' }}>
-            Звонков сегодня: {callsToday.length}
-          </span>
+          <span style={{ fontSize: '13px', color: '#f59e0b', fontWeight: '600' }}>Звонков сегодня: {callsToday.length}</span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {callsToday.slice(0, 4).map(l => (
-              <button key={l.id} onClick={() => setModalLead(l)} style={{
-                fontSize: '12px', padding: '3px 10px', borderRadius: '99px',
-                background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b40',
-                cursor: 'pointer', fontWeight: '500',
-              }}>
+              <button key={l.id} onClick={() => setModalLead(l)} style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '99px', background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b40', cursor: 'pointer', fontWeight: '500' }}>
                 {l.name}
               </button>
             ))}
@@ -791,12 +942,12 @@ export default function LeadsPage() {
           style={{ ...inputStyle, flex: '1', minWidth: '240px' }}
         />
         {viewMode === 'table' && (
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={selectStyle}>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', width: 'auto' }}>
             <option value="">Все статусы</option>
             {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
           </select>
         )}
-        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={selectStyle}>
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', width: 'auto' }}>
           <option value="">Все источники</option>
           {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
         </select>
@@ -816,14 +967,12 @@ export default function LeadsPage() {
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <input placeholder="Имя *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required style={inputStyle} />
             <input placeholder="Телефон *" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required style={inputStyle} />
-            <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} style={selectStyle}>
+            <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
               {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
             </select>
-            <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={selectStyle}>
+            <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
               {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
-
-            {/* Стоимость курса */}
             <div style={{ position: 'relative' }}>
               <input
                 type="number" placeholder="Стоимость курса (₸)" value={form.courseAmount}
@@ -832,30 +981,21 @@ export default function LeadsPage() {
               />
               <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text)' }}>₸</span>
             </div>
-
-            {/* Следующий звонок */}
-            <div style={{ position: 'relative' }}>
-              <input
-                type="date" value={form.nextCallAt}
-                min={dayjs().format('YYYY-MM-DD')}
-                onChange={e => setForm({ ...form, nextCallAt: e.target.value })}
-                style={inputStyle}
-                placeholder="Дата следующего звонка"
-              />
-            </div>
-
-            {/* Менеджер */}
-            <select value={form.managerId} onChange={e => setForm({ ...form, managerId: e.target.value })} style={selectStyle}>
+            <input
+              type="date" value={form.nextCallAt}
+              min={dayjs().format('YYYY-MM-DD')}
+              onChange={e => setForm({ ...form, nextCallAt: e.target.value })}
+              style={inputStyle}
+            />
+            <select value={form.managerId} onChange={e => setForm({ ...form, managerId: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
               <option value="">Без менеджера</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
-
             <input
               placeholder="Комментарий"
               value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })}
               style={inputStyle}
             />
-
             <div style={{ gridColumn: 'span 2', display: 'flex', gap: '8px' }}>
               <button type="submit" style={btnPrimary}>{editLead ? 'Сохранить' : 'Добавить'}</button>
               <button type="button" onClick={resetForm} style={btnSecondary}>Отмена</button>
@@ -909,19 +1049,10 @@ export default function LeadsPage() {
                         <td style={{ padding: '12px 8px 12px 16px', color: 'var(--text)', fontSize: '12px', userSelect: 'none' }}>
                           <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: expandedId === lead.id ? 'rotate(90deg)' : 'none' }}>▶</span>
                         </td>
-                        <td style={{ padding: '12px 14px', fontSize: '14px', fontWeight: '600', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
-                          {lead.name}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }}>
-                          {lead.phone}
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text)' }}>
-                          {SOURCE_LABELS[lead.source] || lead.source}
-                        </td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <StatusBadge status={lead.status} />
-                        </td>
-                        {/* Финансы */}
+                        <td style={{ padding: '12px 14px', fontSize: '14px', fontWeight: '600', color: 'var(--text3)', whiteSpace: 'nowrap' }}>{lead.name}</td>
+                        <td style={{ padding: '12px 14px', fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }}>{lead.phone}</td>
+                        <td style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text)' }}>{SOURCE_LABELS[lead.source] || lead.source}</td>
+                        <td style={{ padding: '12px 14px' }}><StatusBadge status={lead.status} /></td>
                         <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                           {lead.courseAmount > 0 ? (
                             <div>
@@ -938,14 +1069,9 @@ export default function LeadsPage() {
                             <span style={{ fontSize: '12px', color: 'var(--text)', opacity: 0.4 }}>—</span>
                           )}
                         </td>
-                        {/* Звонок */}
                         <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                           {lead.nextCallAt ? (
-                            <span style={{
-                              fontSize: '12px', fontWeight: overdue || today ? '700' : '400',
-                              color: overdue ? '#ef4444' : today ? '#f59e0b' : 'var(--text2)',
-                              fontFamily: 'var(--mono)',
-                            }}>
+                            <span style={{ fontSize: '12px', fontWeight: overdue || today ? '700' : '400', color: overdue ? '#ef4444' : today ? '#f59e0b' : 'var(--text2)', fontFamily: 'var(--mono)' }}>
                               {overdue ? '⚠️ ' : today ? '🔔 ' : ''}{dayjs(lead.nextCallAt).format('DD.MM.YYYY')}
                             </span>
                           ) : (
@@ -1018,13 +1144,15 @@ const sectionTitle = {
   marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase',
   display: 'block',
 }
-
+const labelSm = {
+  display: 'block', fontSize: '10px', color: 'var(--text)',
+  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px',
+}
 const inputStyle = {
   padding: '9px 12px', background: 'var(--bg3)', border: '1px solid var(--border)',
   borderRadius: '8px', color: 'var(--text3)', fontSize: '13px', outline: 'none',
   transition: 'border-color 0.15s', boxSizing: 'border-box', width: '100%',
 }
-const selectStyle = { ...inputStyle, cursor: 'pointer' }
 const btnPrimary = {
   padding: '9px 20px', background: 'var(--accent2)', color: 'white', border: 'none',
   borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600',
