@@ -12,6 +12,59 @@ const SOURCE_LABELS = { manual: 'Вручную', whatsapp: 'WhatsApp', instagra
 const EVENT_TYPES = ['comment', 'call', 'status_change']
 const EVENT_LABELS = { comment: '💬 Комментарий', call: '📞 Звонок', status_change: '🔄 Изменение' }
 const EVENT_ICONS = { comment: '💬', call: '📞', status_change: '🔄' }
+const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
+function LeadSchedule({ lead, onUpdate }) {
+  const [days, setDays] = useState(lead.scheduleDays ? JSON.parse(lead.scheduleDays) : [])
+  const [time, setTime] = useState(lead.scheduleTime || '')
+  const [saving, setSaving] = useState(false)
+
+  const toggleDay = (day) => {
+    setDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onUpdate({ scheduleDays: JSON.stringify(days), scheduleTime: time })
+    setSaving(false)
+    toast.success('Расписание сохранено')
+  }
+
+  return (
+    <div style={{ padding: '16px 20px', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        📅 Расписание занятий
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        {DAYS.map(day => (
+          <button
+            key={day}
+            onClick={() => toggleDay(day)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: '1px solid ' + (days.includes(day) ? 'var(--accent2)' : 'var(--border)'),
+              background: days.includes(day) ? 'var(--accent2)' : 'var(--bg3)',
+              color: days.includes(day) ? 'white' : 'var(--text)',
+              cursor: 'pointer', fontSize: '13px', fontWeight: '500', transition: 'all 0.15s'
+            }}
+          >{day}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <input
+          type="time"
+          value={time}
+          onChange={e => setTime(e.target.value)}
+          style={{ ...inputStyle, width: 'auto' }}
+        />
+        <button onClick={handleSave} disabled={saving} style={btnPrimary}>
+          {saving ? 'Сохраняю...' : 'Сохранить'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function LeadHistory({ leadId }) {
   const qc = useQueryClient()
@@ -68,11 +121,7 @@ function LeadHistory({ leadId }) {
       )}
 
       <form onSubmit={handleAdd} style={{ display: 'flex', gap: '8px' }}>
-        <select
-          value={type}
-          onChange={e => setType(e.target.value)}
-          style={selectStyle}
-        >
+        <select value={type} onChange={e => setType(e.target.value)} style={selectStyle}>
           {EVENT_TYPES.map(t => <option key={t} value={t}>{EVENT_LABELS[t]}</option>)}
         </select>
         <input
@@ -91,9 +140,7 @@ function LeadHistory({ leadId }) {
             border: 'none', borderRadius: '8px', cursor: text.trim() ? 'pointer' : 'not-allowed',
             fontSize: '13px', fontWeight: '500', transition: 'all 0.15s', whiteSpace: 'nowrap',
           }}
-        >
-          Добавить
-        </button>
+        >Добавить</button>
       </form>
     </div>
   )
@@ -144,6 +191,11 @@ export default function LeadsPage() {
     setShowForm(true)
   }
 
+  const handleScheduleUpdate = (lead, data) => {
+    return api.put(`/leads/${lead.id}`, { ...lead, ...data })
+      .then(() => qc.invalidateQueries(['leads']))
+  }
+
   const toggleHistory = (id) => setExpandedId(prev => prev === id ? null : id)
 
   const filteredLeads = useMemo(() => {
@@ -167,7 +219,6 @@ export default function LeadsPage() {
 
   return (
     <div style={{ maxWidth: '1100px', animation: 'fadeIn 0.3s ease both' }}>
-      {/* Заголовок */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text3)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
@@ -178,15 +229,9 @@ export default function LeadsPage() {
           </h1>
           <div style={{ fontSize: '13px', color: 'var(--text)' }}>Управление заявками и учениками</div>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          style={btnPrimary}
-        >
-          + Добавить лид
-        </button>
+        <button onClick={() => setShowForm(true)} style={btnPrimary}>+ Добавить лид</button>
       </div>
 
-      {/* Поиск и фильтры */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input
           placeholder="🔍 Поиск по имени, телефону, комментарию..."
@@ -210,7 +255,6 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* Форма */}
       {showForm && (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '22px', borderRadius: '12px', marginBottom: '16px', animation: 'slideDown 0.2s ease both', boxShadow: 'var(--shadow)' }}>
           <h3 style={{ marginBottom: '16px', fontSize: '15px', color: 'var(--text3)' }}>{editLead ? '✏️ Редактировать лид' : '+ Новый лид'}</h3>
@@ -232,7 +276,6 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Таблица */}
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
         <div className="table-wrapper">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -275,6 +318,12 @@ export default function LeadsPage() {
                     <tr key={`history-${lead.id}`}>
                       <td colSpan={7} style={{ padding: 0 }}>
                         <LeadHistory leadId={lead.id} />
+                        {lead.status === 'studying' && (
+                          <LeadSchedule
+                            lead={lead}
+                            onUpdate={(data) => handleScheduleUpdate(lead, data)}
+                          />
+                        )}
                       </td>
                     </tr>
                   )}
