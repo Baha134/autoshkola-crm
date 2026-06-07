@@ -31,7 +31,7 @@ function LeadSchedule({ lead, onUpdate }) {
   }
 
   return (
-    <div style={{ padding: '16px 20px', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
+    <div style={{ marginTop: '16px', padding: '16px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         📅 Расписание занятий
       </div>
@@ -40,7 +40,7 @@ function LeadSchedule({ lead, onUpdate }) {
           <button key={day} onClick={() => toggleDay(day)} style={{
             padding: '6px 14px', borderRadius: '8px',
             border: '1px solid ' + (days.includes(day) ? 'var(--accent2)' : 'var(--border)'),
-            background: days.includes(day) ? 'var(--accent2)' : 'var(--bg3)',
+            background: days.includes(day) ? 'var(--accent2)' : 'var(--bg2)',
             color: days.includes(day) ? 'white' : 'var(--text)',
             cursor: 'pointer', fontSize: '13px', fontWeight: '500', transition: 'all 0.15s'
           }}>{day}</button>
@@ -77,8 +77,8 @@ function LeadHistory({ leadId }) {
   const handleAdd = (e) => { e.preventDefault(); if (!text.trim()) return; addMutation.mutate({ leadId, type, text }) }
 
   return (
-    <div style={{ padding: '16px 20px 18px', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: '14px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+    <div>
+      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         История лида
       </div>
       {isLoading ? (
@@ -86,9 +86,9 @@ function LeadHistory({ leadId }) {
       ) : events.length === 0 ? (
         <div style={{ color: 'var(--text)', fontSize: '13px', marginBottom: '12px' }}>Событий пока нет</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px', maxHeight: '200px', overflowY: 'auto' }}>
           {events.map(ev => (
-            <div key={ev.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px 10px', background: 'var(--bg2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <div key={ev.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
               <span style={{ fontSize: '15px', marginTop: '1px' }}>{EVENT_ICONS[ev.type] || '📝'}</span>
               <div style={{ flex: 1 }}>
                 <span style={{ fontSize: '13px', color: 'var(--text3)' }}>{ev.text}</span>
@@ -97,9 +97,7 @@ function LeadHistory({ leadId }) {
                 </div>
               </div>
               <button onClick={() => deleteMutation.mutate(ev.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border2)', fontSize: '13px', padding: '0 2px', transition: 'color 0.15s' }}
-                onMouseEnter={e => e.target.style.color = 'var(--red)'}
-                onMouseLeave={e => e.target.style.color = 'var(--border2)'}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border2)', fontSize: '13px', padding: '0 2px' }}
               >✕</button>
             </div>
           ))}
@@ -122,15 +120,70 @@ function LeadHistory({ leadId }) {
   )
 }
 
-function LeadCard({ lead, onEdit, onDelete, onDragStart }) {
+function LeadModal({ lead, onClose, onEdit, onDelete, onScheduleUpdate }) {
+  const color = STATUS_COLORS[lead.status]
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px', width: '100%', maxWidth: '560px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Шапка */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text3)', marginBottom: '4px' }}>{lead.name}</div>
+            <div style={{ fontSize: '13px', color: 'var(--text2)', fontFamily: 'var(--mono)', marginBottom: '8px' }}>{lead.phone}</div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '600', background: color + '18', color, border: `1px solid ${color}30` }}>
+                {STATUS_LABELS[lead.status]}
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--text)' }}>{SOURCE_LABELS[lead.source]}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text)', fontFamily: 'var(--mono)' }}>{dayjs(lead.createdAt).format('DD.MM.YYYY')}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={() => { onEdit(lead); onClose() }} style={iconBtn('#3b82f6')}>✏️</button>
+            <button onClick={() => { if (confirm('Удалить лид?')) { onDelete(lead.id); onClose() } }} style={iconBtn('#ef4444')}>🗑️</button>
+            <button onClick={onClose} style={{ ...iconBtn('#888'), fontSize: '16px' }}>✕</button>
+          </div>
+        </div>
+
+        {/* Комментарий */}
+        {lead.comment && (
+          <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--text2)' }}>
+            💬 {lead.comment}
+          </div>
+        )}
+
+        {/* История */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <LeadHistory leadId={lead.id} />
+        </div>
+
+        {/* Расписание если учится */}
+        {lead.status === 'studying' && (
+          <div style={{ padding: '20px 24px' }}>
+            <LeadSchedule lead={lead} onUpdate={onScheduleUpdate} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LeadCard({ lead, onEdit, onDelete, onDragStart, onClick }) {
   const color = STATUS_COLORS[lead.status]
   return (
     <div
       draggable
-      onDragStart={() => onDragStart(lead)}
+      onDragStart={(e) => { e.stopPropagation(); onDragStart(lead) }}
+      onClick={onClick}
       style={{
         background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px',
-        padding: '12px 14px', cursor: 'grab', transition: 'all 0.15s', marginBottom: '8px',
+        padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s', marginBottom: '8px',
         borderLeft: `3px solid ${color}`,
       }}
       onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)'}
@@ -141,16 +194,16 @@ function LeadCard({ lead, onEdit, onDelete, onDragStart }) {
       {lead.comment && <div style={{ fontSize: '12px', color: 'var(--text)', marginBottom: '6px', opacity: 0.8 }}>{lead.comment}</div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
         <span style={{ fontSize: '11px', color: 'var(--text)', fontFamily: 'var(--mono)' }}>{SOURCE_LABELS[lead.source]}</span>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button onClick={(e) => { e.stopPropagation(); onEdit(lead) }} style={iconBtn('#3b82f6')}>✏️</button>
-          <button onClick={(e) => { e.stopPropagation(); if (confirm('Удалить лид?')) onDelete(lead.id) }} style={iconBtn('#ef4444')}>🗑️</button>
+        <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
+          <button onClick={() => onEdit(lead)} style={iconBtn('#3b82f6')}>✏️</button>
+          <button onClick={() => { if (confirm('Удалить лид?')) onDelete(lead.id) }} style={iconBtn('#ef4444')}>🗑️</button>
         </div>
       </div>
     </div>
   )
 }
 
-function KanbanBoard({ leads, onEdit, onDelete, onStatusChange }) {
+function KanbanBoard({ leads, onEdit, onDelete, onDragStart, onStatusChange, onCardClick }) {
   const dragLead = useRef(null)
   const [dragOver, setDragOver] = useState(null)
 
@@ -195,12 +248,10 @@ function KanbanBoard({ leads, onEdit, onDelete, onStatusChange }) {
             </div>
             <div style={{ minHeight: '60px' }}>
               {col.map(lead => (
-                <LeadCard key={lead.id} lead={lead} onEdit={onEdit} onDelete={onDelete} onDragStart={handleDragStart} />
+                <LeadCard key={lead.id} lead={lead} onEdit={onEdit} onDelete={onDelete} onDragStart={handleDragStart} onClick={() => onCardClick(lead)} />
               ))}
               {col.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--text)', fontSize: '12px', padding: '20px 0', opacity: 0.5 }}>
-                  Пусто
-                </div>
+                <div style={{ textAlign: 'center', color: 'var(--text)', fontSize: '12px', padding: '20px 0', opacity: 0.5 }}>Пусто</div>
               )}
             </div>
           </div>
@@ -219,7 +270,8 @@ export default function LeadsPage() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterSource, setFilterSource] = useState('')
-  const [viewMode, setViewMode] = useState('table') // 'table' | 'kanban'
+  const [viewMode, setViewMode] = useState('table')
+  const [modalLead, setModalLead] = useState(null)
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
@@ -289,6 +341,18 @@ export default function LeadsPage() {
 
   return (
     <div style={{ maxWidth: viewMode === 'kanban' ? '100%' : '1100px', animation: 'fadeIn 0.3s ease both' }}>
+
+      {/* Модалка */}
+      {modalLead && (
+        <LeadModal
+          lead={leads.find(l => l.id === modalLead.id) || modalLead}
+          onClose={() => setModalLead(null)}
+          onEdit={handleEdit}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          onScheduleUpdate={(data) => handleScheduleUpdate(modalLead, data)}
+        />
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text3)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
@@ -300,37 +364,26 @@ export default function LeadsPage() {
           <div style={{ fontSize: '13px', color: 'var(--text)' }}>Управление заявками и учениками</div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {/* Переключатель вида */}
           <div style={{ display: 'flex', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '8px', padding: '3px', gap: '2px' }}>
-            <button
-              onClick={() => setViewMode('table')}
-              style={{
-                padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '500',
-                background: viewMode === 'table' ? 'var(--accent2)' : 'transparent',
-                color: viewMode === 'table' ? 'white' : 'var(--text)',
-                transition: 'all 0.15s'
-              }}
-            >☰ Таблица</button>
-            <button
-              onClick={() => setViewMode('kanban')}
-              style={{
-                padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '500',
-                background: viewMode === 'kanban' ? 'var(--accent2)' : 'transparent',
-                color: viewMode === 'kanban' ? 'white' : 'var(--text)',
-                transition: 'all 0.15s'
-              }}
-            >⬛ Канбан</button>
+            <button onClick={() => setViewMode('table')} style={{
+              padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '500',
+              background: viewMode === 'table' ? 'var(--accent2)' : 'transparent',
+              color: viewMode === 'table' ? 'white' : 'var(--text)', transition: 'all 0.15s'
+            }}>☰ Таблица</button>
+            <button onClick={() => setViewMode('kanban')} style={{
+              padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '500',
+              background: viewMode === 'kanban' ? 'var(--accent2)' : 'transparent',
+              color: viewMode === 'kanban' ? 'white' : 'var(--text)', transition: 'all 0.15s'
+            }}>⬛ Канбан</button>
           </div>
           <button onClick={() => setShowForm(true)} style={btnPrimary}>+ Добавить лид</button>
         </div>
       </div>
 
-      {/* Поиск и фильтры */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input
           placeholder="🔍 Поиск по имени, телефону, комментарию..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={search} onChange={e => setSearch(e.target.value)}
           style={{ ...inputStyle, flex: '1', minWidth: '240px' }}
         />
         {viewMode === 'table' && (
@@ -344,16 +397,14 @@ export default function LeadsPage() {
           {SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABELS[s]}</option>)}
         </select>
         {hasFilters && (
-          <button
-            onClick={() => { setSearch(''); setFilterStatus(''); setFilterSource('') }}
-            style={{ padding: '9px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)', transition: 'all 0.15s' }}
+          <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterSource('') }}
+            style={{ padding: '9px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text)' }}
           >✕ Сбросить</button>
         )}
       </div>
 
-      {/* Форма */}
       {showForm && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '22px', borderRadius: '12px', marginBottom: '16px', animation: 'slideDown 0.2s ease both', boxShadow: 'var(--shadow)' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', padding: '22px', borderRadius: '12px', marginBottom: '16px', boxShadow: 'var(--shadow)' }}>
           <h3 style={{ marginBottom: '16px', fontSize: '15px', color: 'var(--text3)' }}>{editLead ? '✏️ Редактировать лид' : '+ Новый лид'}</h3>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <input placeholder="Имя" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required style={inputStyle} />
@@ -373,17 +424,16 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Канбан */}
       {viewMode === 'kanban' && (
         <KanbanBoard
           leads={filteredLeads}
           onEdit={handleEdit}
           onDelete={(id) => deleteMutation.mutate(id)}
           onStatusChange={handleStatusChange}
+          onCardClick={(lead) => setModalLead(lead)}
         />
       )}
 
-      {/* Таблица */}
       {viewMode === 'table' && (
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
           <div className="table-wrapper">
@@ -399,8 +449,7 @@ export default function LeadsPage() {
               <tbody>
                 {filteredLeads.map(lead => (
                   <>
-                    <tr
-                      key={lead.id}
+                    <tr key={lead.id}
                       style={{ borderTop: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}
@@ -424,10 +473,12 @@ export default function LeadsPage() {
                     {expandedId === lead.id && (
                       <tr key={`history-${lead.id}`}>
                         <td colSpan={7} style={{ padding: 0 }}>
-                          <LeadHistory leadId={lead.id} />
-                          {lead.status === 'studying' && (
-                            <LeadSchedule lead={lead} onUpdate={(data) => handleScheduleUpdate(lead, data)} />
-                          )}
+                          <div style={{ padding: '16px 20px 18px', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
+                            <LeadHistory leadId={lead.id} />
+                            {lead.status === 'studying' && (
+                              <LeadSchedule lead={lead} onUpdate={(data) => handleScheduleUpdate(lead, data)} />
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -436,7 +487,7 @@ export default function LeadsPage() {
                 {filteredLeads.length === 0 && (
                   <tr>
                     <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text)', fontSize: '14px' }}>
-                      {hasFilters ? '🔍 Ничего не найдено. Попробуй изменить фильтры.' : '◈ Лидов пока нет. Добавь первый!'}
+                      {hasFilters ? '🔍 Ничего не найдено.' : '◈ Лидов пока нет. Добавь первый!'}
                     </td>
                   </tr>
                 )}
@@ -452,10 +503,7 @@ export default function LeadsPage() {
 function StatusBadge({ status }) {
   const color = STATUS_COLORS[status]
   return (
-    <span style={{
-      padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '600',
-      background: color + '18', color, border: `1px solid ${color}30`,
-    }}>
+    <span style={{ padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '600', background: color + '18', color, border: `1px solid ${color}30` }}>
       {STATUS_LABELS[status]}
     </span>
   )
