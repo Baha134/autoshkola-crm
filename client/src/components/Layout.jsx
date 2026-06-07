@@ -1,5 +1,5 @@
 // ПОЛНЫЙ ФАЙЛ: client/src/components/Layout.jsx
-// Изменения: добавлен пункт "Напоминания" в меню + красный счётчик на иконке
+// Изменения vs этап 3: добавлен пункт "Расписание" в меню
 
 import { Outlet, NavLink } from 'react-router-dom'
 import { useState } from 'react'
@@ -21,7 +21,6 @@ export default function Layout() {
   const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Считаем напоминания для бейджа
   const { data: leads = [] } = useQuery({
     queryKey: ['leads'],
     queryFn: () => api.get('/leads').then(r => r.data),
@@ -34,10 +33,11 @@ export default function Layout() {
   ).length
 
   const navItems = [
-    { to: '/',          icon: '◈', label: 'Дашборд'     },
-    { to: '/leads',     icon: '◉', label: 'Лиды'        },
-    { to: '/reminders', icon: '🔔', label: 'Напоминания', badge: alertCount },
-    { to: '/payments',  icon: '◷', label: 'Платежи'     },
+    { to: '/',           icon: '◈', label: 'Дашборд'     },
+    { to: '/leads',      icon: '◉', label: 'Лиды'        },
+    { to: '/reminders',  icon: '🔔', label: 'Напоминания', badge: alertCount },
+    { to: '/schedule',   icon: '📅', label: 'Расписание'  },
+    { to: '/payments',   icon: '◷', label: 'Платежи'     },
     ...(user?.role === 'admin' ? [{ to: '/users', icon: '◎', label: 'Сотрудники' }] : []),
   ]
 
@@ -59,36 +59,21 @@ export default function Layout() {
   return (
     <div style={{ display: 'flex', minHeight: '100svh', background: 'var(--bg)' }}>
 
-      {/* ── Overlay (мобильный) ── */}
       <div
         className="mobile-overlay"
         onClick={() => setSidebarOpen(false)}
-        style={{
-          display: 'none',
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40,
-        }}
+        style={{ display: 'none', position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
       />
 
-      {/* ── Sidebar ── */}
       <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`} style={{
         width: '220px', flexShrink: 0,
-        background: 'var(--bg2)',
-        borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        padding: '16px 12px',
-        zIndex: 50,
+        background: 'var(--bg2)', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', padding: '16px 12px', zIndex: 50,
       }}>
-
-        {/* Кнопка закрытия (мобильная) */}
-        <button
-          className="sidebar-close"
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            display: 'none', alignSelf: 'flex-end', marginBottom: '8px',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text)', fontSize: '20px', padding: '4px',
-          }}
-        >✕</button>
+        <button className="sidebar-close" onClick={() => setSidebarOpen(false)} style={{
+          display: 'none', alignSelf: 'flex-end', marginBottom: '8px',
+          background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)', fontSize: '20px', padding: '4px',
+        }}>✕</button>
 
         {/* Лого */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 4px', marginBottom: '20px' }}>
@@ -104,7 +89,6 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Навигация */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
           {navItems.map(item => (
             <NavLink
@@ -121,10 +105,8 @@ export default function Layout() {
               {item.badge > 0 && (
                 <span style={{
                   minWidth: '18px', height: '18px', borderRadius: '9px',
-                  background: '#ef4444', color: 'white',
-                  fontSize: '10px', fontWeight: '700',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 4px',
+                  background: '#ef4444', color: 'white', fontSize: '10px', fontWeight: '700',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                 }}>
                   {item.badge > 99 ? '99+' : item.badge}
                 </span>
@@ -134,9 +116,7 @@ export default function Layout() {
         </nav>
 
         {/* Профиль */}
-        <div style={{
-          borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px',
-        }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <div style={{
               width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
@@ -153,14 +133,11 @@ export default function Layout() {
               <div style={{ fontSize: '10px', color: 'var(--text)', marginTop: '1px' }}>{user?.role === 'admin' ? 'Администратор' : 'Менеджер'}</div>
             </div>
           </div>
-          <button
-            onClick={logout}
-            style={{
-              width: '100%', padding: '8px', background: 'var(--bg3)',
-              border: '1px solid var(--border)', borderRadius: '8px',
-              cursor: 'pointer', fontSize: '12px', color: 'var(--text)',
-              transition: 'all 0.15s',
-            }}
+          <button onClick={logout} style={{
+            width: '100%', padding: '8px', background: 'var(--bg3)',
+            border: '1px solid var(--border)', borderRadius: '8px',
+            cursor: 'pointer', fontSize: '12px', color: 'var(--text)', transition: 'all 0.15s',
+          }}
             onMouseEnter={e => { e.target.style.borderColor = 'var(--red)'; e.target.style.color = 'var(--red)' }}
             onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text)' }}
           >
@@ -169,28 +146,16 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* ── Основной контент ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-
-        {/* Мобильная шапка */}
         <header className="mobile-header" style={{
-          display: 'none',
-          alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 16px',
-          background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
+          display: 'none', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
           position: 'sticky', top: 0, zIndex: 30,
         }}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text3)', padding: '4px' }}
-          >☰</button>
+          <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text3)', padding: '4px' }}>☰</button>
           <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text3)' }}>🚗 AutoCRM</div>
           {alertCount > 0 && (
-            <div style={{
-              padding: '4px 10px', borderRadius: '100px',
-              background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
-              fontSize: '11px', color: '#ef4444', fontWeight: '700',
-            }}>
+            <div style={{ padding: '4px 10px', borderRadius: '100px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', fontSize: '11px', color: '#ef4444', fontWeight: '700' }}>
               🔔 {alertCount}
             </div>
           )}
