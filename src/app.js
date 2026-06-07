@@ -16,6 +16,7 @@ app.use('/api/leads', require('./routes/leads.routes'))
 app.use('/api/payments', require('./routes/payments.routes'))
 app.use('/api/users', require('./routes/users.routes'))
 app.use('/api/events', require('./routes/lead_events.routes'))
+app.use('/api/dashboard', require('./routes/dashboard.routes'))
 
 app.get('/', (req, res) => {
   res.json({ message: 'Autoshkola CRM API работает ✅' })
