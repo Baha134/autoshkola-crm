@@ -42,10 +42,10 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, phone, source, status, comment, managerId } = req.body
+    const { name, phone, source, status, comment, managerId, scheduleDays, scheduleTime } = req.body
     const lead = await prisma.lead.update({
       where: { id: Number(req.params.id) },
-      data: { name, phone, source, status, comment, managerId: managerId ? Number(managerId) : null }
+      data: { name, phone, source, status, comment, managerId: managerId ? Number(managerId) : null, scheduleDays, scheduleTime }
     })
     res.json(lead)
   } catch (e) {
